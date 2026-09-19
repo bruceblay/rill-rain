@@ -10,12 +10,11 @@ int main(int argc, char** argv) {
   uint32_t seed = argc > 2 ? std::strtoul(argv[2], nullptr, 10) : 23;
   auto engine = std::unique_ptr<field::Engine>(new field::Engine(seed));
   auto scene = std::unique_ptr<weather::Scene>(new weather::Scene(seed));
-  scene->setTexture(engine->currentTexture());
   if (argc > 3 && std::strtoul(argv[3], nullptr, 10) % 2 == 1) scene->regenerate();
-  // Advance real audio so the visual has transient hits to react to.
+  // Advance real audio so the visual has bar ticks to react to.
   for (unsigned i = 0; i < field::rate * 6; ++i) {
     engine->sample();
-    if ((i % (field::rate / 60)) == 0) scene->render(1.0f / 60, engine->drainHit());
+    if ((i % (field::rate / 60)) == 0) scene->render(1.0f / 60, engine->drainBarTick());
   }
   std::ofstream out(argv[1], std::ios::binary);
   out << "P6\n240 135\n255\n";

@@ -15,8 +15,8 @@ static bool infoVisible = false, audioFailed = false;
 static uint32_t infoAt = 0, worstVisualUs = 0;
 static int16_t buffers[3][512];
 static std::atomic<bool> playing{true}, changeRequested{false}, repaintRequested{false};
-static std::atomic<uint32_t> sceneInfo{0}, currentStep{0};
-static std::atomic<bool> hitFlag{false};
+static std::atomic<uint32_t> sceneInfo{0};
+static std::atomic<bool> tickFlag{false};
 static std::atomic<uint32_t> worstRenderUs{0}, queueErrors{0};
 static uint8_t volume = 165;
 
@@ -29,8 +29,7 @@ void audioTask(void*) {
     engine.render(buffers[index], 512);
     uint32_t elapsed = micros() - start;
     sceneInfo.store(engine.displayInfo());
-    currentStep.store(engine.currentStep());
-    if (engine.drainHit()) hitFlag.store(true);
+    if (engine.drainBarTick()) tickFlag.store(true);
     if (elapsed > worstRenderUs) worstRenderUs = elapsed;
     while (!M5.Speaker.playRaw(buffers[index], 512, field::rate, false, 1, 0)) {
       ++queueErrors;
@@ -59,9 +58,9 @@ void draw() {
   d.drawFastHLine(16, 48, 208, 0x4208);
   d.setTextSize(2);
   uint32_t info = sceneInfo.load();
-  static const char* textures[] = {"Water", "Rain", "Wind"};
-  d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 3]);
-  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 9), unsigned(info & 127), engine.barCount());
+  static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw"};
+  d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 7]);
+  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 10), unsigned(info & 127), engine.barCount());
   d.setCursor(16, 108);
   if (playing) d.printf("Vol %u%%", unsigned(volume) * 100 / 255);
   else d.print("resting");
@@ -78,7 +77,6 @@ void setup() {
   Serial.begin(115200);
   engine.seed(esp_random());
   scene.seed(esp_random());
-  scene.setTexture(engine.currentTexture());
   sceneInfo.store(engine.displayInfo());
   M5.BtnA.setHoldThresh(650);
   M5.Display.setRotation(1);
@@ -107,7 +105,7 @@ void loop() {
   if (M5.BtnA.wasHold()) { playing = !playing; changed = true; }
   static uint32_t lastScene = 0;
   uint32_t currentScene = sceneInfo.load();
-  const bool newTexture = lastScene != 0 && (currentScene >> 9) != (lastScene >> 9);
+  const bool newTexture = lastScene != 0 && (currentScene >> 10) != (lastScene >> 10);
   if (currentScene != lastScene) { lastScene = currentScene; changed = true; }
   if (M5.BtnB.wasClicked()) {
     volume = volume >= 255 ? 45 : volume + 30;
@@ -116,7 +114,6 @@ void loop() {
   }
   static uint32_t frameAt = 0;
   const bool newVisual = repaintRequested.exchange(false);
-  if (newTexture) scene.setTexture(engine.currentTexture());
   if (newTexture || newVisual) { scene.regenerate(); infoVisible=false; frameAt=now-33; }
   if (infoVisible && uint32_t(now - infoAt) >= 4000) infoVisible = false;
   static bool wasInfoVisible = false;
@@ -127,8 +124,8 @@ void loop() {
       float dt = std::min(0.25f,float(uint32_t(now-frameAt))/1000);
       frameAt = now;
       uint32_t started = micros();
-      bool hit = hitFlag.exchange(false);
-      scene.render(dt, hit);
+      bool beat = tickFlag.exchange(false);
+      scene.render(dt, beat);
       M5.Display.pushImage(0,0,240,135,reinterpret_cast<const lgfx::rgb565_t*>(scene.pixels()));
       worstVisualUs = std::max(worstVisualUs,uint32_t(micros()-started));
     }
@@ -139,8 +136,8 @@ void loop() {
     report = millis();
     Serial.printf("render worst=%lu us / 16000 us; queue errors=%lu; heap=%u; generation=%lu BPM=%lu texture=%lu visual=%u visual_us=%lu\n",
       (unsigned long)worstRenderUs.load(), (unsigned long)queueErrors.load(), ESP.getFreeHeap(),
-      (unsigned long)(currentScene >> 9), (unsigned long)(currentScene & 127),
-      (unsigned long)((currentScene >> 7) & 3),
+      (unsigned long)(currentScene >> 10), (unsigned long)(currentScene & 127),
+      (unsigned long)((currentScene >> 7) & 7),
       scene.generation(),(unsigned long)worstVisualUs);
   }
   delay(10);

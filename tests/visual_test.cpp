@@ -32,11 +32,5 @@ int main() {
   a->render(0, true); b->render(0, false);
   assert(hash(*a) != hash(*b));
 
-  // Each texture drifts differently, so the same seed diverges once textured.
-  a->seed(23); b->seed(23);
-  a->setTexture(0); b->setTexture(1);
-  for (unsigned i = 0; i < 30; ++i) { a->render(1.0f / 60, false); b->render(1.0f / 60, false); }
-  assert(hash(*a) != hash(*b));
-
-  std::cout << "Determinism, animation, hit response and texture drift passed\n";
+  std::cout << "Determinism, animation and hit response passed\n";
 }

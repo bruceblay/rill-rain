@@ -5,164 +5,200 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include "Samples.h"
 
-// A bounded, deterministic generative noise machine shared by firmware and
-// audition. No allocation, locks, or transcendental functions in a way that
-// would break the per-sample budget. Three filtered-noise textures, no
-// sample playback, in the spirit of a vintage electronic sound conditioner
-// (Marsona-style tone/rate/range knobs) rather than a bank of field
-// recordings: one texture active at a time, its filter cutoff and transient
-// density riding a bar-synced swell so the wash reads as rhythmic instead of
-// flat hiss. The swell and step clock are deliberately the same shape as
-// Rill's proposed ensemble tempo/bar broadcast (see SYNC-DESIGN.md in the
-// Rill repository) so a future conductor packet only needs to set this
-// engine's tempo and bar phase, not restructure it.
+// A bounded, deterministic playback engine shared by firmware and audition.
+// No allocation, locks, or unbounded work in the per-sample path. Real field
+// recordings (see docs/SOURCES.md), not generated noise -- an earlier
+// from-scratch filtered-noise synthesis was tried first and rejected by ear
+// as universally bad, the same conclusion Rill Drums reached about its own
+// procedural noise voices.
+//
+// A continuous sine sweep on the filter, at a wide range, read as "the main
+// event" instead of texture -- narrowed the range and slowed it down.
+// A stepped, sample-and-hold version (a new random cutoff on a rhythmic
+// pattern, held rather than swept) was tried in between and didn't work out
+// by ear either; reverted to the sweep. Five punch-in effects (Pitch
+// Wobble, Delay Throw, Crush, Reverb, Smear) still layer on top for variety
+// across a longer sit-and-listen, the same direction Rill Drums' punch-in
+// effects took: occasional, self-clearing, and evolving while active rather
+// than one flat setting. Crush sweeps its hold depth in and back out rather
+// than snapping to a fixed amount; Smear is Delay Throw's blurrier sibling,
+// wobbling its tap length and damping each repeat so the echoes smear into
+// the bed instead of reading as a discrete, clean echo.
+//
+// This still stands in for a future ensemble conductor's shared tempo and
+// bar boundary (see SYNC-DESIGN.md in the Rill repository): the bar clock
+// here is exactly what a conductor packet would eventually drive.
 namespace field {
 constexpr uint32_t rate = 32000;
 constexpr float pi = 3.14159265358979323846f;
 constexpr unsigned steps = 16;
-enum Texture : unsigned { Water = 0, Rain, Wind, textureCount };
+// A box of rain: six real recordings of rain hitting different surfaces
+// (umbrella cloth, puddle, concrete, terrace tile, a plastic tarpaulin, a
+// metal wheelbarrow), not a general nature-sounds machine. Water and Wind
+// were dropped -- this project is rain-specific now.
+enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow, textureCount };
+enum Punch : unsigned { PunchNone = 0, PunchPitchWobble, PunchDelayThrow, PunchCrush, PunchReverb, PunchSmear, punchCount };
 
 class Engine {
   struct Character {
-    float cutoffHz, q;              // resting filter color
-    float swellDepthHz, swellBars;  // slow bar-synced brighten/darken, like Surf Rate/Range
-    float rippleHz, rippleDepthHz;  // fast free-running shimmer (water only)
-    float transientChance;          // probability a scheduled step actually fires
-    float transientDecay, transientColorHz, transientQ, transientGain;
-    float bedGain;
-  };
-  struct Transient {
-    bool active = false;
-    float amp = 0, decay = 1, svfLow = 0, svfBand = 0, svfF = 0.5f, svfQ = 0.5f;
+    float cutoffLowHz, cutoffHighHz; // sweep range (dark <-> open)
+    float q, gain, swellBars;        // swellBars: bars per full breath
   };
 
-  uint32_t rng, noiseRng = 0x9e3779b9u, scoreRng = 1, transientRng = 1;
+  uint32_t rng, punchRng = 1;
   unsigned texture = 0, generation = 0;
   unsigned tempo = 56;
   uint32_t stepSamples = rate * 60 / (56 * 4);
-  uint64_t clock = 0, nextStep = 0;
-  unsigned stepIndex = 0, bar = 0;
-  uint16_t accentPattern = 0;
+  uint32_t barSamples = stepSamples * steps, barPhase = 0;
+  uint64_t clock = 0;
+  unsigned bar = 0;
+  bool barTick = false;
 
-  float bedSvfLow = 0, bedSvfBand = 0;
+  float readPos = 0, playRate = 1;
+  static constexpr uint32_t crossfadeLen = 4000; // ~125 ms, avoids a click at the loop point
+
+  float svfLow = 0, svfBand = 0;
   float swellPhase = 0, swellStep = 0;
-  float ripplePhase = 0, rippleStep = 0;
-  std::array<Transient, 4> transients{};
-  unsigned nextTransient = 0;
-  bool firedThisBlock = false;
 
-  // Crossfade across a texture change so a new spectrum never arrives as a click.
   enum Xfade : unsigned { Steady = 0, FadingOut, FadingIn };
   unsigned xfadeState = Steady;
   float xfadeGain = 1;
+
+  // Punch-in variety, one at a time, self-clearing after its window.
+  unsigned punchType = PunchNone;
+  uint64_t punchStartAt = 0, punchEndAt = 0;
+  float punchPitchTarget = 1;
+  std::array<int16_t, rate> delay{}; // 1 s, shared by Delay Throw and Smear
+  unsigned delayWrite = 0, delayTapSamples = rate / 6;
+  float delayFeedback = 0, delayMix = 0, delayDamp = 0;
+  float smearWobblePhase = 0, smearWobbleStep = 0;
+  unsigned crushMaxHold = 1, crushHoldCounter = 0;
+  float crushHeldSample = 0;
+  // A short comb + allpass diffuser for Reverb, the same shape as Rill
+  // Drums' room send, just fully off except during the punch window.
+  std::array<float, 1601> room{};
+  unsigned roomIndex = 0;
+  float roomDamping = 0;
+  std::array<float, 233> diffuser{};
+  unsigned diffuserIndex = 0;
+  float reverbMix = 0;
 
   float outputRamp = 0, target = 1, level = 0;
   float dcIn = 0, dcOut = 0;
 
   uint32_t random() { rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5; return rng; }
   float unit() { return float(random() >> 8) / 16777216.0f; }
-  uint32_t scoreRandom() { scoreRng ^= scoreRng << 13; scoreRng ^= scoreRng >> 17; scoreRng ^= scoreRng << 5; return scoreRng; }
-  float scoreUnit() { return float(scoreRandom() >> 8) / 16777216.0f; }
-  uint32_t transientRandom() { transientRng ^= transientRng << 13; transientRng ^= transientRng >> 17; transientRng ^= transientRng << 5; return transientRng; }
-  float transientUnit() { return float(transientRandom() >> 8) / 16777216.0f; }
-  float noise() {
-    noiseRng ^= noiseRng << 13; noiseRng ^= noiseRng >> 17; noiseRng ^= noiseRng << 5;
-    return float(int32_t(noiseRng)) / 2147483648.0f;
-  }
+  uint32_t punchRandom() { punchRng ^= punchRng << 13; punchRng ^= punchRng >> 17; punchRng ^= punchRng << 5; return punchRng; }
+  float punchUnit() { return float(punchRandom() >> 8) / 16777216.0f; }
   static float svfCoeff(float hz) {
-    // Kept with real headroom below Nyquist/6: at Q above ~1 the Chamberlin
-    // state-variable filter starts to self-oscillate as its coefficient
-    // approaches that bound, aliasing into a full-scale buzz rather than a
-    // colored transient (found by a host jump-bound test failing on Rain's
-    // droplet filter at 5200 Hz / Q 1.3).
-    float clamped = std::min(hz, rate * 0.12f);
+    float clamped = std::min(hz, rate * 0.2f);
     return 2.0f * std::sin(pi * clamped / rate);
   }
 
   const Character& active_() const { return characters()[texture]; }
   static const std::array<Character, textureCount>& characters() {
-    // Tuned by ear against the built-in speaker's rolloff, not against a
-    // reference monitor. Rain and Wind lean on transientChance for their
-    // rhythm; Water instead leans on rippleHz, the way a stream's texture
-    // moves without ever hitting discrete events.
+    // Narrower ranges and slower swells than the first pass, which was
+    // called too fast and too much the predominant thing being heard.
+    // Q kept low so the sweep colors the recording rather than resonating.
+    // Floors kept at or above ~700 Hz: this speaker (confirmed by Rill
+    // Drums' own measurements, see its NOTES.md) barely reproduces
+    // anything lower, so a sweep that dips below that doesn't read as
+    // "dark," it reads as silence.
     static const std::array<Character, textureCount> table{{
-      // Water: a running-stream band, brightened by a fast shimmer as well
-      // as the slow bar swell. No discrete transients.
-      {1100, 1.1f,  700, 3,   0.9f, 260,   0.0f, 0.15f, 2200, 0.6f, 0.0f,  0.42f},
-      // Rain: a high, soft hiss bed plus frequent short bright droplets
-      // scheduled on the step grid.
-      {3000, 0.55f, 400, 4,   0.0f, 0,     0.34f, 0.12f, 3400, 0.85f, 0.55f, 0.30f},
-      // Wind / leaves: a low-mid band that wanders slowly, with occasional
-      // longer gusts and sparse leaf-rustle transients.
-      {450,  0.7f,  900, 6,   0.0f, 0,     0.16f, 0.35f, 1500, 0.5f, 0.35f, 0.46f},
+      {1000, 3200, 0.35f, 0.9f, 12},  // Rain (umbrella): steady wash
+      {1000, 3200, 0.4f, 0.95f, 10},  // Rain on puddle: percussive drops
+      {1000, 3200, 0.4f, 0.95f, 10},  // Rain on concrete: percussive drops
+      {1000, 3200, 0.4f, 0.9f, 11},   // Rain on terrace: big storm drops
+      {1200, 3600, 0.45f, 0.9f, 9},   // Rain on tarpaulin: brighter, plasticky
+      {1200, 4000, 0.5f, 0.85f, 9},   // Rain on wheelbarrow: metallic, most resonant
     }};
     return table;
   }
 
-  void scheduleAccents() {
-    // A sparse, semi-random pattern of scheduled steps; whether one actually
-    // fires still passes through transientChance in stepClock().
-    unsigned pulses = 3 + scoreRandom() % 5;
-    pulses = std::min(pulses, steps);
-    uint16_t bits = 0;
-    for (unsigned i = 0; i < steps; ++i) if ((i * pulses) % steps < pulses) bits |= uint16_t(1u << i);
-    unsigned rotation = scoreRandom() % steps;
-    accentPattern = uint16_t(((bits >> rotation) | (bits << (steps - rotation))) & 0xffffu);
-  }
-
-  void triggerTransient() {
-    const Character& c = active_();
-    Transient& t = transients[nextTransient];
-    nextTransient = (nextTransient + 1) % transients.size();
-    t.active = true;
-    t.amp = c.transientGain * (0.6f + 0.4f * transientUnit());
-    t.decay = std::exp(-1.0f / (rate * c.transientDecay * (0.7f + 0.6f * transientUnit())));
-    t.svfF = svfCoeff(c.transientColorHz * (0.85f + 0.3f * transientUnit()));
-    t.svfQ = c.transientQ;
-    t.svfLow = t.svfBand = 0;
-    firedThisBlock = true;
-  }
-
-  void stepClock() {
-    if (clock < nextStep) return;
-    const Character& c = active_();
-    if ((accentPattern >> stepIndex) & 1u) {
-      if (transientUnit() < c.transientChance) triggerTransient();
-    }
-    nextStep += stepSamples;
-    if (++stepIndex == steps) {
-      stepIndex = 0;
-      ++bar;
-    }
+  void applyCharacter() {
+    tempo = 56 + random() % 37; // 56-92 BPM, overlapping Rill's and Rill Drums' ranges
+    stepSamples = rate * 60 / (tempo * 4);
+    barSamples = stepSamples * steps;
+    punchRng = (rng ^ 0xc2b2ae35u) | 1u;
+    barPhase = 0; bar = 0;
+    swellStep = 2 * pi / (active_().swellBars * barSamples);
+    swellPhase = unit() * 2 * pi;
+    svfLow = svfBand = 0;
+    readPos = 0; playRate = 1;
+    punchType = PunchNone; punchPitchTarget = 1;
+    delayFeedback = delayMix = delayDamp = 0;
+    crushHoldCounter = 0;
+    reverbMix = roomDamping = 0;
+    room.fill(0); diffuser.fill(0);
+    smearWobblePhase = 0;
   }
 
   void beginXfade() { xfadeState = FadingOut; }
 
-  void applyCharacter() {
-    tempo = 56 + random() % 37; // 56-92 BPM, overlapping Rill's and Rill Drums' ranges
-    stepSamples = rate * 60 / (tempo * 4);
-    scoreRng = (rng ^ 0x51ed270bu) | 1u;
-    transientRng = (rng ^ 0xa341316cu) | 1u;
-    stepIndex = 0; bar = 0; nextStep = clock;
-    scheduleAccents();
-    swellStep = 2 * pi / (active_().swellBars * steps * stepSamples);
-    rippleStep = 2 * pi * active_().rippleHz / rate;
-    swellPhase = unit() * 2 * pi;
-    ripplePhase = 0;
-    bedSvfLow = bedSvfBand = 0;
-    for (auto& t : transients) t.active = false;
+  void stepClock() {
+    if (++barPhase >= barSamples) { barPhase = 0; ++bar; barTick = true; maybePunch(); }
+  }
+
+  void maybePunch() {
+    if (punchType != PunchNone || punchUnit() > 0.30f) return;
+    punchType = 1 + punchRandom() % (punchCount - 1);
+    punchStartAt = clock;
+    punchEndAt = clock + uint64_t(stepSamples) * steps * (1 + punchRandom() % 2); // one or two bars
+    switch (punchType) {
+      case PunchPitchWobble:
+        punchPitchTarget = 0.82f + punchUnit() * 0.32f; // 0.82x-1.14x speed
+        break;
+      case PunchDelayThrow:
+        delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (2 + punchRandom() % 5));
+        break;
+      case PunchCrush:
+        crushMaxHold = 3 + punchRandom() % 5; // light: 3-7 samples held at the deepest point
+        crushHoldCounter = 0;
+        break;
+      case PunchSmear:
+        delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (3 + punchRandom() % 4));
+        smearWobbleStep = 2 * pi * (0.1f + punchUnit() * 0.15f) / rate; // slow, ~0.1-0.25 Hz
+        break;
+      default: break;
+    }
+  }
+
+  float punchProgress() const {
+    if (punchEndAt <= punchStartAt) return 1;
+    return std::min(1.0f, float(clock - punchStartAt) / float(punchEndAt - punchStartAt));
+  }
+
+  float readSample() {
+    const samples::Clip& clip = samples::textures[texture];
+    uint32_t length = clip.length;
+    // texture switches immediately on newVariation() while the crossfade
+    // still plays out the old clip's tail, so readPos may briefly belong to
+    // a differently-sized clip; guard rather than assume the lengths match.
+    if (readPos >= length) readPos = std::fmod(readPos, float(length));
+    uint32_t i0 = uint32_t(readPos);
+    uint32_t i1 = (i0 + 1 < length) ? i0 + 1 : 0;
+    float frac = readPos - i0;
+    float value = clip.data[i0] / 32768.0f + (clip.data[i1] / 32768.0f - clip.data[i0] / 32768.0f) * frac;
+    uint32_t tailStart = length - crossfadeLen;
+    if (i0 >= tailStart) {
+      float t = std::min(1.0f, (readPos - tailStart) / crossfadeLen);
+      uint32_t h0 = i0 - tailStart;
+      uint32_t h1 = h0 + 1 < crossfadeLen ? h0 + 1 : h0;
+      float head = clip.data[h0] / 32768.0f + (clip.data[h1] / 32768.0f - clip.data[h0] / 32768.0f) * frac;
+      value = value * (1 - t) + head * t;
+    }
+    readPos += playRate;
+    if (readPos >= length) readPos -= length;
+    return value;
   }
 
  public:
   explicit Engine(uint32_t value = 0x6669656c) { seed(value); }
   void seed(uint32_t value) {
     rng = value ? value : 1;
-    // xorshift32 correlates its first output with a small seed value; a few
-    // throwaway iterations avoid every low seed picking the same initial
-    // texture (found by rendering seeds 1-20 for a listen and getting Water
-    // every time).
-    for (unsigned i = 0; i < 6; ++i) random();
+    for (unsigned i = 0; i < 6; ++i) random(); // avoid small-seed correlation on the first texture pick
     generation = 0;
     generate();
   }
@@ -177,10 +213,10 @@ class Engine {
   unsigned variation() const { return generation; }
   unsigned bpm() const { return tempo; }
   unsigned currentTexture() const { return texture; }
-  unsigned currentStep() const { return stepIndex; }
   unsigned barCount() const { return bar; }
-  uint32_t displayInfo() const { return (generation << 9) | (texture << 7) | tempo; }
-  bool drainHit() { bool h = firedThisBlock; firedThisBlock = false; return h; }
+  unsigned currentPunch() const { return punchType; }
+  uint32_t displayInfo() const { return (generation << 10) | (texture << 7) | tempo; }
+  bool drainBarTick() { bool t = barTick; barTick = false; return t; }
 
   float sample() {
     if (xfadeState == FadingOut) {
@@ -193,40 +229,74 @@ class Engine {
     stepClock(); ++clock;
     const Character& c = active_();
 
+    playRate += ((punchType == PunchPitchWobble ? punchPitchTarget : 1.0f) - playRate) / (rate * 0.15f);
     swellPhase += swellStep; if (swellPhase > 2 * pi) swellPhase -= 2 * pi;
     float swell = 0.5f + 0.5f * std::sin(swellPhase);
-    float cutoff = c.cutoffHz + c.swellDepthHz * swell;
-    if (c.rippleDepthHz > 0) {
-      ripplePhase += rippleStep; if (ripplePhase > 2 * pi) ripplePhase -= 2 * pi;
-      cutoff += c.rippleDepthHz * std::sin(ripplePhase);
-    }
-    float bedF = svfCoeff(std::max(60.0f, cutoff));
-    float input = noise();
-    float notch = input - c.q * bedSvfBand;
-    bedSvfLow += bedF * bedSvfBand;
-    float high = notch - bedSvfLow;
-    bedSvfBand += bedF * high;
-    float bed = bedSvfBand * c.bedGain * (0.85f + 0.15f * swell);
+    float cutoff = c.cutoffLowHz + (c.cutoffHighHz - c.cutoffLowHz) * swell;
+    float f = svfCoeff(cutoff);
+    float input = readSample();
+    float notch = input - c.q * svfBand;
+    svfLow += f * svfBand;
+    float high = notch - svfLow;
+    svfBand += f * high;
+    float filtered = svfLow * c.gain;
 
-    float transientSum = 0;
-    for (auto& t : transients) {
-      if (!t.active) continue;
-      float in = noise();
-      float tn = in - t.svfQ * t.svfBand;
-      t.svfLow += t.svfF * t.svfBand;
-      float th = tn - t.svfLow;
-      t.svfBand += t.svfF * th;
-      transientSum += t.svfBand * t.amp;
-      t.amp *= t.decay;
-      if (std::abs(t.amp) < 0.0005f) t.active = false;
+    bool smear = punchType == PunchSmear;
+    float delayProgress = (punchType == PunchDelayThrow || smear) ? std::sin(punchProgress() * pi) : 0;
+    delayFeedback += ((smear ? 0.45f : 0.30f) * delayProgress - delayFeedback) / (rate * 0.05f);
+    delayMix += ((smear ? 0.5f : 0.35f) * delayProgress - delayMix) / (rate * 0.05f);
+    // Smear wobbles its tap length and darkens each repeat, so the echoes
+    // blur into the bed instead of reading as a discrete, clean echo.
+    smearWobblePhase += smearWobbleStep; if (smearWobblePhase > 2 * pi) smearWobblePhase -= 2 * pi;
+    float wobbleSamples = smear ? 40.0f * delayProgress : 0.0f;
+    unsigned tapNow = unsigned(std::max(1.0f, delayTapSamples + std::sin(smearWobblePhase) * wobbleSamples));
+    unsigned readIndex = unsigned((delayWrite + delay.size() - std::min<unsigned>(delay.size() - 1, tapNow)) % delay.size());
+    float delayed = delay[readIndex] / 32768.0f;
+    delayDamp += (smear ? 0.5f : 0.15f) * (delayed - delayDamp);
+    float delayedTone = smear ? delayDamp : delayed;
+    float delayWriteValue = filtered + delayedTone * delayFeedback;
+    delay[delayWrite] = int16_t(std::max(-0.98f, std::min(0.98f, delayWriteValue)) * 32767);
+    if (++delayWrite == delay.size()) delayWrite = 0;
+    float withDelay = filtered + delayedTone * delayMix;
+
+    // Sample-rate crush: holds the output for a slowly swept number of
+    // samples (1 at rest, up to crushMaxHold at the peak of the window and
+    // back), rather than a fixed crush depth snapping on and off.
+    float crushed = withDelay;
+    if (punchType == PunchCrush) {
+      float depth = std::sin(punchProgress() * pi);
+      unsigned holdN = 1 + unsigned(depth * crushMaxHold);
+      if (crushHoldCounter == 0) crushHeldSample = withDelay;
+      crushHoldCounter = (crushHoldCounter + 1) % std::max(1u, holdN);
+      crushed = crushHeldSample;
+    } else {
+      crushHoldCounter = 0;
     }
 
-    float mix = (bed + transientSum) * xfadeGain;
+    // Reverb: a short comb + allpass diffuser, silent except during its
+    // punch window, where it fades in and back out with the signal.
+    float reverbTarget = punchType == PunchReverb ? 0.35f * std::sin(punchProgress() * pi) : 0.0f;
+    reverbMix += (reverbTarget - reverbMix) / (rate * 0.05f);
+    float delayedRoom = room[roomIndex % room.size()];
+    roomDamping += 0.30f * (delayedRoom - roomDamping);
+    room[roomIndex % room.size()] = crushed * 0.5f + roomDamping * 0.35f;
+    ++roomIndex;
+    float diffA = diffuser[diffuserIndex];
+    diffuser[diffuserIndex] = delayedRoom + diffA * 0.5f;
+    float wet = diffA - diffuser[diffuserIndex] * 0.5f;
+    if (++diffuserIndex == diffuser.size()) diffuserIndex = 0;
+    float withReverb = crushed + wet * reverbMix;
+
+    if (punchType != PunchNone && clock >= punchEndAt) {
+      punchType = PunchNone; punchPitchTarget = 1;
+    }
+
+    float mix = withReverb * xfadeGain;
     float clean = mix - dcIn + 0.999f * dcOut;
     dcIn = mix; dcOut = clean;
     level += (target - level) / (rate * 0.2f);
     outputRamp = std::min(1.0f, outputRamp + 1.0f / (rate * 0.08f));
-    float x = clean * level * outputRamp * 1.6f;
+    float x = clean * level * outputRamp;
     return x / (1 + std::abs(x));
   }
   void render(int16_t* output, unsigned count) {

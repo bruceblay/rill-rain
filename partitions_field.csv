@@ -1,0 +1,9 @@
+# Name,   Type, SubType,  Offset,   Size, Flags
+# Single factory app partition (no OTA) instead of the default two 3.3 MB
+# ota_0/ota_1 slots -- this project has no OTA update mechanism (flashed by
+# USB each time), and its rain samples are embedded directly in the app
+# binary rather than a filesystem, so the freed space goes to headroom for
+# more/longer samples instead of a second copy of the firmware.
+nvs,      data, nvs,      0x9000,  0x5000,
+factory,  app,  factory,  0x10000, 0x700000,
+coredump, data, coredump, 0x710000,0x10000,
