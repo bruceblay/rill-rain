@@ -171,14 +171,16 @@ class Engine {
     return table;
   }
 
-  // Punch magnitudes vary by bank, not just by punch type: Birds and
-  // Insects run identical, bigger/wobblier smears and Delay Throws (more
-  // feedback, more mix) and a wider pitch-wobble range than Rain, so both
-  // occasionally tip into something a little surreal rather than staying a
-  // tasteful accent throughout. Delay Throw's own feedback/mix used to be a
-  // flat constant regardless of bank; pushed further and made bank-aware
-  // alongside Smear after direct feedback that the delay effects "could
-  // still stand to be a bit more extreme."
+  // Punch magnitudes vary by bank, not just by punch type: Birds, Insects
+  // and Cave run the biggest, wobbliest smears and Delay Throws (more
+  // feedback, more mix) and a wider pitch-wobble range than Rain and
+  // Ocean, so they occasionally tip into something a little surreal rather
+  // than staying a tasteful accent throughout. Mix (the wet/dry balance,
+  // separate from feedback's repeat count) was raised a second time across
+  // every bank after direct feedback that the delay effects were still not
+  // audible/intense enough; Cave was bumped up to Birds/Insects' tier
+  // specifically after direct feedback that it "would sound great with the
+  // delay stuff on it."
   struct PunchStyle {
     float delayThrowFeedback, delayThrowMix;
     float smearFeedback, smearMix, smearWobbleAmp;
@@ -187,11 +189,11 @@ class Engine {
   };
   static const std::array<PunchStyle, bankCount>& punchStyles() {
     static const std::array<PunchStyle, bankCount> table{{
-      {0.42f, 0.48f, 0.58f, 0.65f, 55.0f, 3, 5, 0.82f, 0.32f},   // Rain: pushed up from the original tuning
-      {0.60f, 0.68f, 0.88f, 0.90f, 140.0f, 4, 10, 0.65f, 0.55f}, // Birds: bigger smear/throw, wider pitch swing
-      {0.60f, 0.68f, 0.88f, 0.90f, 140.0f, 4, 10, 0.65f, 0.55f}, // Insects: kept identical to Birds
-      {0.50f, 0.58f, 0.72f, 0.78f, 95.0f, 4, 8, 0.72f, 0.45f},   // Ocean: big, wide smears fit a rolling sea
-      {0.50f, 0.58f, 0.72f, 0.78f, 95.0f, 4, 8, 0.72f, 0.45f},   // Cave: kept identical to Ocean for now
+      {0.50f, 0.62f, 0.62f, 0.75f, 55.0f, 3, 5, 0.82f, 0.32f},   // Rain: mix raised again
+      {0.65f, 0.80f, 0.90f, 0.96f, 140.0f, 4, 10, 0.65f, 0.55f}, // Birds: mix raised again
+      {0.65f, 0.80f, 0.90f, 0.96f, 140.0f, 4, 10, 0.65f, 0.55f}, // Insects: kept identical to Birds
+      {0.55f, 0.68f, 0.78f, 0.85f, 95.0f, 4, 8, 0.72f, 0.45f},   // Ocean: mix raised again
+      {0.65f, 0.80f, 0.90f, 0.96f, 140.0f, 4, 10, 0.72f, 0.45f}, // Cave: promoted to Birds/Insects' tier
     }};
     return table;
   }
