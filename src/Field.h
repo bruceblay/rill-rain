@@ -136,10 +136,10 @@ class Engine {
       {1200, 4200, 0.35f, 0.85f, 12}, // Bird forest ambience: steady bed, chirps laced through
       {1200, 3800, 0.35f, 0.7f, 12},  // Birds waking: dawn chorus -- toned down, ran busy at full brightness/gain
       {1100, 3800, 0.35f, 0.85f, 13}, // Evening birds: calmer, built to loop
-      {1300, 3800, 0.4f, 1.15f, 10},  // Nocturnal insects + wind: raised gain/floor -- read as near-silent at the original level
+      {1300, 3800, 0.4f, 2.4f, 10},   // Nocturnal insects + wind: raised again -- still read as quiet next to the crickets
       {1100, 3800, 0.35f, 0.85f, 12}, // Crickets + frogs meadow: fuller mix
       {1300, 4400, 0.4f, 0.95f, 10},  // Field cricket, close: high-pitched plus a lower mechanical noise
-      {1300, 4200, 0.4f, 0.95f, 9},   // Night grasshopper: distinct rhythmic chirr
+      {1300, 4200, 0.4f, 1.7f, 9},    // Night grasshopper: raised -- also read as quiet next to the crickets
       {900, 3200, 0.35f, 0.9f, 13},   // Sea waves (Atlantic shore): steady rolling wash
       {900, 3000, 0.35f, 0.9f, 12},   // Sea waves (moderate, swirls): a touch darker
       {1400, 4800, 0.4f, 0.95f, 8},   // Bottlenose dolphin: bright clicks/whistles, faster swell
@@ -209,7 +209,10 @@ class Engine {
   }
 
   void maybePunch() {
-    if (punchType != PunchNone || punchUnit() > 0.30f) return;
+    // Raised from 0.30: delay/smear are only 2 of 5 punch types, and at the
+    // original rate a listener could easily go a while without ever
+    // catching one.
+    if (punchType != PunchNone || punchUnit() > 0.45f) return;
     punchType = 1 + punchRandom() % (punchCount - 1);
     punchStartAt = clock;
     punchEndAt = clock + uint64_t(stepSamples) * steps * (1 + punchRandom() % 2); // one or two bars
