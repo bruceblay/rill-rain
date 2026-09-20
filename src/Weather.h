@@ -17,10 +17,16 @@
 // opaque ink, no additive glow, and a fainter particle is paler (mixed
 // toward the ground colour) rather than darker (mixed toward black) --
 // mixing toward black is what made early passes on those projects read as
-// a neon screensaver. This project keeps a dark ground rather than their
-// daylight one (it suits rain at night), including one palette with a
-// genuinely blue ground rather than near-black, but the mixing rule and the
-// four fixed shade steps (not a continuous ramp) carry over unchanged.
+// a neon screensaver. That rule holds regardless of which colour is
+// lighter: mix toward the ground either way, land on one of four fixed
+// shade steps rather than a continuous ramp.
+//
+// The ground colour is fixed per bank -- it's how a bank reads at a glance,
+// not something that shuffles -- while a handful of ink colours vary within
+// a bank on regenerate(). Rain keeps a dark, moody charcoal-blue ground
+// with pale ink (it suits rain at night). Birds inverts that: a light,
+// fun sky-blue ground with dark ink, so its particles read as birds
+// against open sky rather than stars against night.
 //
 // Deliberately decoupled from Field.h -- this header knows nothing of
 // field::Bank -- but its own bankCount and per-bank palette/drift tables are
@@ -36,13 +42,12 @@ class Scene {
 
  private:
   struct Color { float r, g, b; };
-  struct Palette { Color ground, ink; };
-  struct BankPalettes { const Palette* palettes; unsigned count; };
+  struct BankPalette { Color background; const Color* inks; unsigned inkCount; };
   struct Particle { float x, y, speed, size, phase; };
   enum DriftKind : unsigned { Fall = 0, Drift };
   std::array<uint16_t, width * height> frame{};
   uint32_t rng;
-  unsigned bank = 0, palette = 0, count = 0;
+  unsigned bank = 0, inkIndex = 0, count = 0;
   float phase = 0, breath = 0;
   Color ground{}, ink{};
   uint16_t backgroundPacked = 0;
@@ -75,26 +80,50 @@ class Scene {
         if (dx * dx + dy * dy <= r * r) frame[unsigned(y) * width + unsigned(x)] = c;
       }
   }
+  void plot(int x, int y, uint16_t c) {
+    if (x >= 0 && x < int(width) && y >= 0 && y < int(height)) frame[unsigned(y) * width + unsigned(x)] = c;
+  }
+  void strokeLine(float x0, float y0, float x1, float y1, uint16_t c) {
+    int steps = int(std::max(std::abs(x1 - x0), std::abs(y1 - y0))) + 1;
+    for (int i = 0; i <= steps; ++i) {
+      float t = float(i) / steps;
+      plot(int(x0 + (x1 - x0) * t), int(y0 + (y1 - y0) * t), c);
+    }
+  }
+  // A tiny two-stroke chevron -- the plainest possible bird silhouette --
+  // flapping between wings-up and wings-down as it drifts.
+  void bird(float cx, float cy, float r, float flapPhase, float shade) {
+    uint16_t c = mix(shade);
+    float wing = r * std::sin(flapPhase);
+    strokeLine(cx - r, cy + wing * 0.5f, cx, cy - wing, c);
+    strokeLine(cx, cy - wing, cx + r, cy + wing * 0.5f, c);
+  }
   void resetParticles() {
+    // Birds get a bit more wingspan than rain gets dot size, so the
+    // two-stroke chevron actually reads at this resolution.
+    float sizeMul = driftForBank(bank) == Drift ? 1.6f : 1.0f;
     for (auto& p : particles) {
       p.x = unit() * width; p.y = unit() * height;
       p.speed = 0.4f + unit() * 0.8f;
-      p.size = 0.8f + unit() * 1.6f;
+      p.size = (0.8f + unit() * 1.6f) * sizeMul;
       p.phase = unit() * 6.283185f;
     }
   }
-  static const std::array<BankPalettes, bankCount>& bankPalettes() {
-    static const Palette rain[3] = {
-      {{16, 20, 30}, {190, 200, 215}},  // charcoal-blue ground, pale grey-blue ink
-      {{18, 26, 64}, {205, 218, 240}},  // genuinely blue ground, ice-blue ink
-      {{15, 15, 19}, {212, 212, 217}},  // near-neutral dark ground, pale silver ink
+  static const std::array<BankPalette, bankCount>& bankPalettes() {
+    static const Color rainInks[3] = {
+      {190, 200, 215},  // pale grey-blue
+      {205, 218, 240},  // ice blue
+      {212, 212, 217},  // pale silver
     };
-    static const Palette birds[3] = {
-      {{18, 22, 16}, {200, 205, 180}},  // dark mossy-green ground, pale warm ink (forest/dawn)
-      {{24, 18, 28}, {215, 195, 210}},  // dark plum ground, pale lilac ink (dusk)
-      {{18, 24, 58}, {200, 212, 235}},  // blue ground, the same family accent as Rain's blue palette
+    static const Color birdInks[3] = {
+      {70, 90, 45},   // dark olive (forest/dawn)
+      {90, 45, 68},   // dark wine (dusk)
+      {35, 45, 75},   // dark navy (neutral)
     };
-    static const std::array<BankPalettes, bankCount> table{{ {rain, 3}, {birds, 3} }};
+    static const std::array<BankPalette, bankCount> table{{
+      {{16, 20, 30}, rainInks, 3},    // Rain: moody charcoal-blue ground
+      {{130, 195, 240}, birdInks, 3}, // Birds: light sky-blue ground, dark ink -- birds against open sky
+    }};
     return table;
   }
   static DriftKind driftForBank(unsigned b) { return b == 0 ? Fall : Drift; }
@@ -112,11 +141,11 @@ class Scene {
   }
   void setBank(unsigned b) { bank = std::min(b, bankCount - 1); }
   void regenerate() {
-    const BankPalettes& bp = bankPalettes()[bank];
-    palette = count ? (palette + 1 + random() % std::max(1u, bp.count - 1)) % bp.count : random() % bp.count;
+    const BankPalette& bp = bankPalettes()[bank];
+    inkIndex = count ? (inkIndex + 1 + random() % std::max(1u, bp.inkCount - 1)) % bp.inkCount : random() % bp.inkCount;
     ++count; phase = unit() * 6.283185f; breath = 0;
-    ground = bp.palettes[palette].ground;
-    ink = bp.palettes[palette].ink;
+    ground = bp.background;
+    ink = bp.inks[inkIndex];
     backgroundPacked = pack(ground);
     resetParticles();
     frame.fill(backgroundPacked);
@@ -142,7 +171,9 @@ class Scene {
           if (p.y > height + 2) { p.y = -2; p.x = unit() * width; }
       }
       float shimmer = 0.5f + 0.5f * std::sin(phase * 1.3f + p.phase);
-      dot(p.x, p.y, p.size, 0.4f + shimmer * 0.6f);
+      float shade = 0.4f + shimmer * 0.6f;
+      if (drift == Drift) bird(p.x, p.y, p.size, phase * 8.0f + p.phase * 3.0f, shade);
+      else dot(p.x, p.y, p.size, shade);
     }
     if (beat) dot(unit() * width, height * 0.12f, 3, 0.75f + breath * 0.25f);
   }

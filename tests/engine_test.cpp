@@ -70,6 +70,24 @@ int main() {
   }
   std::cout << "Loop crossfade stays within the jump bound\n";
 
+  // Birds runs a wider punch style (bigger smear, wider pitch swing) than
+  // Rain's original tuning; confirm it stays within the same bound.
+  for (uint32_t seed : {1u, 2u, 3u, 4u}) {
+    field::Engine engine(seed);
+    engine.newBank(); // force into Birds
+    float previous = 0, peak = 0, jump = 0;
+    for (unsigned i = 0; i < field::rate * 120; ++i) {
+      if (i && i % (field::rate * 15) == 0) engine.newVariation();
+      float s = engine.sample();
+      assert(std::isfinite(s) && std::abs(s) < 0.95f);
+      peak = std::max(peak, std::abs(s));
+      jump = std::max(jump, std::abs(s - previous));
+      previous = s;
+    }
+    assert(peak > 0.02f && jump < 1.3f);
+  }
+  std::cout << "Birds' wider punch style stays within headroom and the jump bound\n";
+
   // Shake (newBank()) is the only thing that crosses a bank boundary; tap
   // (newVariation()) must never leave the current bank on its own.
   {

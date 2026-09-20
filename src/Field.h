@@ -136,6 +136,23 @@ class Engine {
     return table;
   }
 
+  // Punch magnitudes vary by bank, not just by punch type: Birds runs
+  // bigger, wobblier smears and a wider pitch-wobble range than Rain, so it
+  // occasionally tips into something a little surreal rather than staying
+  // a tasteful accent throughout.
+  struct PunchStyle {
+    float smearFeedback, smearMix, smearWobbleAmp;
+    unsigned smearTapBase, smearTapRange;
+    float pitchLow, pitchRange;
+  };
+  static const std::array<PunchStyle, bankCount>& punchStyles() {
+    static const std::array<PunchStyle, bankCount> table{{
+      {0.45f, 0.50f, 40.0f, 3, 4, 0.82f, 0.32f}, // Rain: as originally tuned
+      {0.60f, 0.65f, 90.0f, 4, 8, 0.65f, 0.55f}, // Birds: bigger smear, wider pitch swing
+    }};
+    return table;
+  }
+
   unsigned pickTextureInBank(unsigned b, bool avoidCurrent) {
     const BankRange& r = bankRanges()[b];
     if (!avoidCurrent || r.count <= 1) return r.first + random() % r.count;
@@ -172,9 +189,10 @@ class Engine {
     punchType = 1 + punchRandom() % (punchCount - 1);
     punchStartAt = clock;
     punchEndAt = clock + uint64_t(stepSamples) * steps * (1 + punchRandom() % 2); // one or two bars
+    const PunchStyle& ps = punchStyles()[bank];
     switch (punchType) {
       case PunchPitchWobble:
-        punchPitchTarget = 0.82f + punchUnit() * 0.32f; // 0.82x-1.14x speed
+        punchPitchTarget = ps.pitchLow + punchUnit() * ps.pitchRange;
         break;
       case PunchDelayThrow:
         delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (2 + punchRandom() % 5));
@@ -184,7 +202,7 @@ class Engine {
         crushHoldCounter = 0;
         break;
       case PunchSmear:
-        delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (3 + punchRandom() % 4));
+        delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (ps.smearTapBase + punchRandom() % ps.smearTapRange));
         smearWobbleStep = 2 * pi * (0.1f + punchUnit() * 0.15f) / rate; // slow, ~0.1-0.25 Hz
         break;
       default: break;
@@ -279,13 +297,14 @@ class Engine {
     float filtered = svfLow * c.gain;
 
     bool smear = punchType == PunchSmear;
+    const PunchStyle& ps = punchStyles()[bank];
     float delayProgress = (punchType == PunchDelayThrow || smear) ? std::sin(punchProgress() * pi) : 0;
-    delayFeedback += ((smear ? 0.45f : 0.30f) * delayProgress - delayFeedback) / (rate * 0.05f);
-    delayMix += ((smear ? 0.5f : 0.35f) * delayProgress - delayMix) / (rate * 0.05f);
+    delayFeedback += ((smear ? ps.smearFeedback : 0.30f) * delayProgress - delayFeedback) / (rate * 0.05f);
+    delayMix += ((smear ? ps.smearMix : 0.35f) * delayProgress - delayMix) / (rate * 0.05f);
     // Smear wobbles its tap length and darkens each repeat, so the echoes
     // blur into the bed instead of reading as a discrete, clean echo.
     smearWobblePhase += smearWobbleStep; if (smearWobblePhase > 2 * pi) smearWobblePhase -= 2 * pi;
-    float wobbleSamples = smear ? 40.0f * delayProgress : 0.0f;
+    float wobbleSamples = smear ? ps.smearWobbleAmp * delayProgress : 0.0f;
     unsigned tapNow = unsigned(std::max(1.0f, delayTapSamples + std::sin(smearWobblePhase) * wobbleSamples));
     unsigned readIndex = unsigned((delayWrite + delay.size() - std::min<unsigned>(delay.size() - 1, tapNow)) % delay.size());
     float delayed = delay[readIndex] / 32768.0f;

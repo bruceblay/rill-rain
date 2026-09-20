@@ -55,7 +55,8 @@ void draw() {
   d.fillScreen(0x1082);
   d.setTextColor(0xD692, 0x1082);
   d.setTextSize(3);
-  d.setCursor(16, 14); d.print("RAIN");
+  static const char* banks[] = {"RAIN", "BIRDS"};
+  d.setCursor(16, 14); d.print(banks[engine.currentBank()]);
   d.drawFastHLine(16, 48, 208, 0x4208);
   d.setTextSize(2);
   uint32_t info = sceneInfo.load();
