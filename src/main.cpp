@@ -14,7 +14,7 @@ static ShakeDetector shake;
 static bool infoVisible = false, audioFailed = false;
 static uint32_t infoAt = 0, worstVisualUs = 0;
 static int16_t buffers[3][512];
-static std::atomic<bool> playing{true}, changeRequested{false}, repaintRequested{false};
+static std::atomic<bool> playing{true}, changeRequested{false}, repaintRequested{false}, bankChangeRequested{false};
 static std::atomic<uint32_t> sceneInfo{0};
 static std::atomic<bool> tickFlag{false};
 static std::atomic<uint32_t> worstRenderUs{0}, queueErrors{0};
@@ -24,6 +24,7 @@ void audioTask(void*) {
   unsigned index = 0;
   for (;;) {
     if (changeRequested.exchange(false)) engine.newVariation();
+    if (bankChangeRequested.exchange(false)) engine.newBank();
     engine.setPlaying(playing.load());
     uint32_t start = micros();
     engine.render(buffers[index], 512);
@@ -43,7 +44,7 @@ void motionTask(void*) {
   for (;;) {
     if (M5.Imu.isEnabled() && (M5.Imu.update() & m5::IMU_Class::sensor_mask_accel)) {
       const auto data = M5.Imu.getImuData();
-      if (shake.update(data.accel.x,data.accel.y,data.accel.z,millis())) repaintRequested = true;
+      if (shake.update(data.accel.x,data.accel.y,data.accel.z,millis())) { repaintRequested = true; bankChangeRequested = true; }
     }
     vTaskDelay(pdMS_TO_TICKS(20));
   }
@@ -113,6 +114,9 @@ void loop() {
     infoVisible = true; infoAt = now;
   }
   static uint32_t frameAt = 0;
+  static unsigned lastBank = 0;
+  unsigned currentBank = engine.currentBank();
+  if (currentBank != lastBank) { lastBank = currentBank; scene.setBank(currentBank); }
   const bool newVisual = repaintRequested.exchange(false);
   if (newTexture || newVisual) { scene.regenerate(); infoVisible=false; frameAt=now-33; }
   if (infoVisible && uint32_t(now - infoAt) >= 4000) infoVisible = false;

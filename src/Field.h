@@ -34,11 +34,15 @@ namespace field {
 constexpr uint32_t rate = 32000;
 constexpr float pi = 3.14159265358979323846f;
 constexpr unsigned steps = 16;
-// A box of rain: six real recordings of rain hitting different surfaces
-// (umbrella cloth, puddle, concrete, terrace tile, a plastic tarpaulin, a
-// metal wheelbarrow), not a general nature-sounds machine. Water and Wind
-// were dropped -- this project is rain-specific now.
+// Six real recordings of rain hitting different surfaces (umbrella cloth,
+// puddle, concrete, terrace tile, a plastic tarpaulin, a metal wheelbarrow).
+// Grouped into one bank for now; the engine and its effects are generic
+// over "whatever clips are in the current bank," so a future bank (birds,
+// body sounds, insects) is just more Texture entries, more Character rows
+// and a new BankRange -- tap still only picks within the current bank,
+// shake (newBank()) is the only thing that crosses a bank boundary.
 enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow, textureCount };
+enum Bank : unsigned { BankRain = 0, bankCount };
 enum Punch : unsigned { PunchNone = 0, PunchPitchWobble, PunchDelayThrow, PunchCrush, PunchReverb, PunchSmear, punchCount };
 
 class Engine {
@@ -47,8 +51,10 @@ class Engine {
     float q, gain, swellBars;        // swellBars: bars per full breath
   };
 
+  struct BankRange { unsigned first, count; };
+
   uint32_t rng, punchRng = 1;
-  unsigned texture = 0, generation = 0;
+  unsigned bank = 0, texture = 0, generation = 0;
   unsigned tempo = 56;
   uint32_t stepSamples = rate * 60 / (56 * 4);
   uint32_t barSamples = stepSamples * steps, barPhase = 0;
@@ -115,6 +121,20 @@ class Engine {
       {1200, 4000, 0.5f, 0.85f, 9},   // Rain on wheelbarrow: metallic, most resonant
     }};
     return table;
+  }
+
+  static const std::array<BankRange, bankCount>& bankRanges() {
+    static const std::array<BankRange, bankCount> table{{
+      {Rain, textureCount}, // all six rain clips
+    }};
+    return table;
+  }
+
+  unsigned pickTextureInBank(unsigned b, bool avoidCurrent) {
+    const BankRange& r = bankRanges()[b];
+    if (!avoidCurrent || r.count <= 1) return r.first + random() % r.count;
+    unsigned localCurrent = texture - r.first;
+    return r.first + (localCurrent + 1 + random() % (r.count - 1)) % r.count;
   }
 
   void applyCharacter() {
@@ -203,16 +223,27 @@ class Engine {
     generate();
   }
   void generate() {
-    texture = generation ? (texture + 1 + random() % (textureCount - 1)) % textureCount : random() % textureCount;
+    texture = pickTextureInBank(bank, generation != 0);
     ++generation;
     if (generation == 1) applyCharacter(); else beginXfade();
   }
   void newVariation() { generate(); }
+  // Shake: cross into a different bank (a no-op today, with only one bank
+  // to switch to -- becomes live the moment a second bank's data exists,
+  // no further engine changes needed).
+  void newBank() {
+    if (bankCount <= 1) return;
+    bank = (bank + 1 + random() % (bankCount - 1)) % bankCount;
+    texture = pickTextureInBank(bank, false);
+    ++generation;
+    beginXfade();
+  }
   void setPlaying(bool playing) { target = playing ? 1.0f : 0.0f; }
 
   unsigned variation() const { return generation; }
   unsigned bpm() const { return tempo; }
   unsigned currentTexture() const { return texture; }
+  unsigned currentBank() const { return bank; }
   unsigned barCount() const { return bar; }
   unsigned currentPunch() const { return punchType; }
   uint32_t displayInfo() const { return (generation << 10) | (texture << 7) | tempo; }
