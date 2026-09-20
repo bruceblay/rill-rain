@@ -62,8 +62,8 @@ void draw() {
   uint32_t info = sceneInfo.load();
   static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw",
                                     "Forest", "Dawn", "Dusk",
-                                    "Night", "Meadow",
-                                    "Waves", "Swirls", "Whale"};
+                                    "Night", "Meadow", "Cricket", "Hopper",
+                                    "Waves", "Swirls", "Dolphin"};
   d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 15]);
   d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 11), unsigned(info & 127), engine.barCount());
   d.setCursor(16, 108);

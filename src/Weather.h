@@ -24,14 +24,15 @@
 // The ground colour is fixed per bank -- it's how a bank reads at a glance,
 // not something that shuffles -- while a handful of ink colours vary within
 // a bank on regenerate(). Rain keeps a dark, moody charcoal-blue ground
-// with pale ink (it suits rain at night). Birds inverts that: a light,
-// fun sky-blue ground with dark ink, so its particles read as birds
-// against open sky rather than stars against night.
+// with pale ink (it suits rain at night). Birds, Insects and Ocean all
+// invert that: light grounds (sky-blue, green, turquoise) with dark ink,
+// so their particles read as things against daylight rather than stars
+// against night.
 //
 // Deliberately decoupled from Field.h -- this header knows nothing of
 // field::Bank -- but its own bankCount and per-bank palette/drift/shape
 // tables are meant to track field::bankCount 1:1, kept in sync by hand
-// (bank index order: Rain, Birds, Insects, Body). Adding a bank means a
+// (bank index order: Rain, Birds, Insects, Ocean). Adding a bank means a
 // new entry in each table, not a restructure.
 namespace weather {
 class Scene {
@@ -124,20 +125,20 @@ class Scene {
       {35, 45, 75},   // dark navy (neutral)
     };
     static const Color insectInks[3] = {
-      {215, 225, 140}, // pale firefly yellow-green
-      {225, 195, 120}, // pale amber
-      {200, 215, 220}, // pale moonlit blue-white
+      {30, 60, 25},   // dark forest green
+      {90, 60, 20},   // dark amber-brown
+      {25, 35, 55},   // dark navy
     };
     static const Color oceanInks[3] = {
-      {200, 230, 225}, // pale sea-foam white
-      {225, 210, 180}, // pale sandy tan
-      {190, 220, 205}, // pale seafoam green
+      {15, 55, 60},   // deep teal
+      {20, 35, 70},   // dark navy
+      {70, 50, 25},   // deep sandy brown
     };
     static const std::array<BankPalette, bankCount> table{{
       {{16, 20, 30}, rainInks, 3},     // Rain: moody charcoal-blue ground
       {{130, 195, 240}, birdInks, 3},  // Birds: light sky-blue ground, dark ink -- birds against open sky
-      {{8, 10, 8}, insectInks, 3},     // Insects: true near-black night
-      {{10, 35, 40}, oceanInks, 3},    // Ocean: deep teal water, pale foam/sand ink
+      {{160, 215, 130}, insectInks, 3},// Insects: light green ground, dark ink
+      {{110, 195, 220}, oceanInks, 3}, // Ocean: lighter turquoise water, dark ink, bubbles rising
     }};
     return table;
   }

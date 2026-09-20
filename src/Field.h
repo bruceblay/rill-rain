@@ -36,23 +36,26 @@ constexpr float pi = 3.14159265358979323846f;
 constexpr unsigned steps = 16;
 // Four banks: six recordings of rain hitting different surfaces (umbrella
 // cloth, puddle, concrete, terrace tile, a plastic tarpaulin, a metal
-// wheelbarrow), three bird ambiences (forest, dawn chorus, evening), two
-// insect ambiences (nocturnal insects, crickets/frogs meadow -- a cicada
-// song was tried and dropped as off-putting), and three ocean recordings
-// (two wave textures, one humpback whale song --
-// the whale clip is a NOAA Fisheries recording, a US federal government
-// work and so public domain rather than CC0 like the rest; see
-// docs/SOURCES.md). A body-sounds bank (heartbeat, breathing) was tried and
-// dropped: not interesting enough to keep, and Ocean read as more distinct
-// from the other three banks anyway. The engine and its effects are generic
-// over "whatever clips are in the current bank," so each bank is just more
-// Texture entries, more Character rows and a BankRange -- tap still only
-// picks within the current bank, shake (newBank()) is the only thing that
-// crosses a bank boundary.
+// wheelbarrow), three bird ambiences (forest, dawn chorus, evening), four
+// insect recordings (nocturnal insects+wind, crickets/frogs meadow, a
+// close field cricket, a lone night grasshopper -- a cicada song was tried
+// and dropped as off-putting), and three ocean recordings (two wave
+// textures, one bottlenose dolphin -- clicks/whistles read far better on
+// this speaker than the humpback whale song originally here, which was
+// too low and read as weak; the dolphin clip is a NOAA Fisheries
+// recording, a US federal government work and so public domain rather
+// than CC0 like the rest; see docs/SOURCES.md). A body-sounds bank
+// (heartbeat, breathing) was tried and dropped: not interesting enough to
+// keep, and Ocean read as more distinct from the other three banks anyway.
+// The engine and its effects are generic over "whatever clips are in the
+// current bank," so each bank is just more Texture entries, more
+// Character rows and a BankRange -- tap still only picks within the
+// current bank, shake (newBank()) is the only thing that crosses a bank
+// boundary.
 enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow,
                            BirdForest, BirdWake, BirdEvening,
-                           InsectNight, InsectCrickets,
-                           OceanWaves1, OceanWaves2, OceanWhale, textureCount };
+                           InsectNight, InsectCrickets, InsectFieldCricket, InsectGrasshopper,
+                           OceanWaves1, OceanWaves2, OceanDolphin, textureCount };
 enum Bank : unsigned { BankRain = 0, BankBirds, BankInsects, BankOcean, bankCount };
 enum Punch : unsigned { PunchNone = 0, PunchPitchWobble, PunchDelayThrow, PunchCrush, PunchReverb, PunchSmear, punchCount };
 
@@ -133,11 +136,13 @@ class Engine {
       {1200, 4200, 0.35f, 0.85f, 12}, // Bird forest ambience: steady bed, chirps laced through
       {1200, 3800, 0.35f, 0.7f, 12},  // Birds waking: dawn chorus -- toned down, ran busy at full brightness/gain
       {1100, 3800, 0.35f, 0.85f, 13}, // Evening birds: calmer, built to loop
-      {1200, 4000, 0.35f, 0.85f, 12}, // Nocturnal insects + wind: broad, ambient
+      {1300, 3800, 0.4f, 1.15f, 10},  // Nocturnal insects + wind: raised gain/floor -- read as near-silent at the original level
       {1100, 3800, 0.35f, 0.85f, 12}, // Crickets + frogs meadow: fuller mix
+      {1300, 4400, 0.4f, 0.95f, 10},  // Field cricket, close: high-pitched plus a lower mechanical noise
+      {1300, 4200, 0.4f, 0.95f, 9},   // Night grasshopper: distinct rhythmic chirr
       {900, 3200, 0.35f, 0.9f, 13},   // Sea waves (Atlantic shore): steady rolling wash
       {900, 3000, 0.35f, 0.9f, 12},   // Sea waves (moderate, swirls): a touch darker
-      {800, 2800, 0.4f, 0.85f, 10},   // Humpback whale song: lower, moaning, not too bright
+      {1400, 4800, 0.4f, 0.95f, 8},   // Bottlenose dolphin: bright clicks/whistles, faster swell
     }};
     return table;
   }
@@ -146,16 +151,17 @@ class Engine {
     static const std::array<BankRange, bankCount> table{{
       {Rain, 6},        // all six rain clips
       {BirdForest, 3},  // all three bird clips
-      {InsectNight, 2}, // both insect clips
+      {InsectNight, 4}, // all four insect clips
       {OceanWaves1, 3}, // all three ocean clips
     }};
     return table;
   }
 
-  // Punch magnitudes vary by bank, not just by punch type: Birds runs
-  // bigger, wobblier smears and a wider pitch-wobble range than Rain, so it
-  // occasionally tips into something a little surreal rather than staying
-  // a tasteful accent throughout.
+  // Punch magnitudes vary by bank, not just by punch type: Birds and
+  // Insects run identical, bigger/wobblier smears (more feedback, more mix)
+  // and a wider pitch-wobble range than Rain, so both occasionally tip into
+  // something a little surreal rather than staying a tasteful accent
+  // throughout.
   struct PunchStyle {
     float smearFeedback, smearMix, smearWobbleAmp;
     unsigned smearTapBase, smearTapRange;
@@ -163,10 +169,10 @@ class Engine {
   };
   static const std::array<PunchStyle, bankCount>& punchStyles() {
     static const std::array<PunchStyle, bankCount> table{{
-      {0.45f, 0.50f, 40.0f, 3, 4, 0.82f, 0.32f}, // Rain: as originally tuned
-      {0.60f, 0.65f, 90.0f, 4, 8, 0.65f, 0.55f}, // Birds: bigger smear, wider pitch swing
-      {0.50f, 0.55f, 55.0f, 3, 5, 0.78f, 0.40f}, // Insects: a bit more than Rain's baseline
-      {0.55f, 0.60f, 70.0f, 4, 6, 0.72f, 0.45f}, // Ocean: big, wide smears fit rolling waves and whale song
+      {0.45f, 0.50f, 40.0f, 3, 4, 0.82f, 0.32f},  // Rain: as originally tuned
+      {0.72f, 0.78f, 100.0f, 4, 8, 0.65f, 0.55f}, // Birds: bigger smear, more feedback, wider pitch swing
+      {0.72f, 0.78f, 100.0f, 4, 8, 0.65f, 0.55f}, // Insects: kept identical to Birds
+      {0.55f, 0.60f, 70.0f, 4, 6, 0.72f, 0.45f},  // Ocean: big, wide smears fit rolling waves and dolphin calls
     }};
     return table;
   }

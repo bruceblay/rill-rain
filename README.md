@@ -19,7 +19,7 @@ The data view shows the current bank, recording, generation, tempo, bar count, v
 
 An earlier version generated its own noise from scratch (filtered white noise standing in for water/rain/wind), in the spirit of a vintage sound conditioner like the Marsona 1200. That synthesis was rejected by ear as universally bad, the same conclusion reached about Rill Drums' own procedural noise voices, so this project pivoted to real recordings instead, and later broadened from a single rain-only device into multiple selectable environments:
 
-- **Four banks so far**: **Rain** (six surfaces -- umbrella, puddle, concrete, terrace, plastic tarpaulin, metal wheelbarrow -- a steady wash through to increasingly percussive and metallic), **Birds** (forest ambience, dawn chorus, evening birds), **Insects** (nocturnal insects, crickets/frogs meadow), and **Ocean** (two wave textures, one humpback whale song). All placeholders pending original field recordings (see [docs/SOURCES.md](docs/SOURCES.md) for sources and licenses -- CC0 except the whale clip, a public-domain NOAA recording). Adding a further bank is data, not a rewrite -- see `src/Field.h`. A cicada clip in Insects and a whole Body bank (heartbeat, breathing) were both tried and dropped: the cicada read as off-putting, and Body just wasn't interesting.
+- **Four banks so far**: **Rain** (six surfaces -- umbrella, puddle, concrete, terrace, plastic tarpaulin, metal wheelbarrow -- a steady wash through to increasingly percussive and metallic), **Birds** (forest ambience, dawn chorus, evening birds), **Insects** (nocturnal insects, crickets/frogs meadow, a close field cricket, a lone night grasshopper), and **Ocean** (two wave textures, one bottlenose dolphin). All placeholders pending original field recordings (see [docs/SOURCES.md](docs/SOURCES.md) for sources and licenses -- CC0 except the dolphin clip, a public-domain NOAA recording). Adding a further bank is data, not a rewrite -- see `src/Field.h`. A cicada clip in Insects and a whole Body bank (heartbeat, breathing) were both tried and dropped: the cicada read as off-putting, and Body just wasn't interesting. Ocean originally used a humpback whale song; replaced with the dolphin after the whale read as too weak on this speaker.
 - **A bar-synced lowpass sweep** stands in for a vintage sound conditioner's Tone/Surf Rate knobs: narrow range, low resonance, slow enough to read as breathing rather than the main event. Its floor is kept above ~700 Hz -- the StickS3's small speaker barely reproduces anything lower (confirmed by Rill Drums' own on-device measurements), so a sweep that dips below that reads as silence, not warmth.
 - **Five punch-in effects** -- Pitch Wobble, Delay Throw, Crush, Reverb, Smear -- one at a time, semi-random, self-clearing after a bar or two, each evolving across its own window rather than sitting at one flat setting. Same direction as Rill Drums' punch-in effects. Magnitude varies per bank: Birds, Insects and Ocean all run bigger, wobblier Smears and a wider Pitch Wobble range than Rain's original tuning (occasionally surreal, by design).
 
@@ -31,7 +31,7 @@ Playback state is not saved across restarts.
 
 The visual is one continuous particle field per bank, not a catalog of families like Rill's or Rill Drums' -- this project's focus is the audio, and the screen only needs to read as alive. A bar boundary briefly brightens a particle near the top, a visible tell for the rhythm that's otherwise only in the audio's filter sweep. Rain's particles are plain falling dots; Birds' are tiny two-stroke chevrons that flap between wings-up and wings-down as they wander; Insects are tiny specks darting erratically; Ocean's are plain dots drifting slowly upward like bubbles. Tap cycles the ink color within a bank; shake crosses to the other bank's ground, ink set, drift and shape entirely.
 
-Color follows the same drawing language as Rill and Rill Drums -- flat opaque ink, a fainter particle mixed toward the ground colour rather than toward black, regardless of which one is lighter. The ground colour is fixed per bank rather than shuffling -- it's how you tell banks apart at a glance: Rain keeps a dark, moody charcoal-blue ground with pale ink (it suits rain at night); Birds inverts that, a light, fun sky-blue ground with dark ink, so its particles read as birds against open sky; Insects gets a true near-black night ground with pale firefly-ish ink; Ocean gets a deep teal ground with pale foam/sand ink.
+Color follows the same drawing language as Rill and Rill Drums -- flat opaque ink, a fainter particle mixed toward the ground colour rather than toward black, regardless of which one is lighter. The ground colour is fixed per bank rather than shuffling -- it's how you tell banks apart at a glance: Rain keeps a dark, moody charcoal-blue ground with pale ink (it suits rain at night); Birds, Insects and Ocean all invert that with light grounds and dark ink -- sky-blue for Birds, green for Insects, a lighter turquoise for Ocean.
 
 **Rain** (falling dots, dark charcoal-blue ground)
 
@@ -45,17 +45,17 @@ Color follows the same drawing language as Rill and Rill Drums -- flat opaque in
 | --- | --- | --- |
 | ![Birds visual, dark olive ink](docs/images/birds-visual-1.png) | ![Birds visual, dark wine ink](docs/images/birds-visual-2.png) | ![Birds visual, dark navy ink](docs/images/birds-visual-3.png) |
 
-**Insects** (darting specks, near-black night ground)
+**Insects** (darting specks, light green ground)
 
 | | | |
 | --- | --- | --- |
-| ![Insects visual, firefly-yellow ink](docs/images/insects-visual-1.png) | ![Insects visual, amber ink](docs/images/insects-visual-2.png) | ![Insects visual, moonlit blue-white ink](docs/images/insects-visual-3.png) |
+| ![Insects visual, dark forest-green ink](docs/images/insects-visual-1.png) | ![Insects visual, dark amber-brown ink](docs/images/insects-visual-2.png) | ![Insects visual, dark navy ink](docs/images/insects-visual-3.png) |
 
-**Ocean** (bubbles drifting upward, deep teal ground)
+**Ocean** (bubbles drifting upward, lighter turquoise ground)
 
 | | | |
 | --- | --- | --- |
-| ![Ocean visual, pale sea-foam ink](docs/images/ocean-visual-1.png) | ![Ocean visual, pale sandy ink](docs/images/ocean-visual-2.png) | ![Ocean visual, pale seafoam-green ink](docs/images/ocean-visual-3.png) |
+| ![Ocean visual, deep teal ink](docs/images/ocean-visual-1.png) | ![Ocean visual, dark navy ink](docs/images/ocean-visual-2.png) | ![Ocean visual, deep sandy-brown ink](docs/images/ocean-visual-3.png) |
 
 These are host-rendered previews (`tools/visual_preview.cpp`), pixel-identical to what the firmware pushes to the real screen, not photos of the device -- the animation and bar-tick highlight don't show in a still frame.
 
@@ -63,7 +63,7 @@ These are host-rendered previews (`tools/visual_preview.cpp`), pixel-identical t
 
 Supported and tested: **M5Stack StickS3**, with ESP32-S3, 8 MB flash, display, IMU and built-in speaker. Other ESP32 boards and earlier M5Stick models are not supported by this configuration.
 
-The PlatformIO board name is `esp32-s3-devkitc-1`; the project supplies the StickS3 memory settings and uses M5Unified for board peripherals. Flash is partitioned as a single ~7 MB factory app slot (`partitions_field.csv`), not the usual two-slot OTA layout, so the embedded clips fit -- this device is flashed by USB each time, not updated over the air. With all four banks the partition is now ~96% full; a further bank or longer clips will need shorter/fewer clips or growing the partition further into the ~900 KB still unallocated on the 8 MB chip.
+The PlatformIO board name is `esp32-s3-devkitc-1`; the project supplies the StickS3 memory settings and uses M5Unified for board peripherals. Flash is partitioned as a single factory app slot (`partitions_field.csv`), not the usual two-slot OTA layout, so the embedded clips fit -- this device is flashed by USB each time, not updated over the air. The partition has already been grown once (~7 MB to ~7.6 MB) to fit Insects' extra clips, and now sits at ~97% full; a further bank or longer clips will need shorter/fewer clips or another grow into the remaining unallocated space on the 8 MB chip.
 
 ## Build and install
 
