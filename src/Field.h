@@ -122,7 +122,7 @@ class Engine {
       {1200, 3600, 0.45f, 0.9f, 9},   // Rain on tarpaulin: brighter, plasticky
       {1200, 4000, 0.5f, 0.85f, 9},   // Rain on wheelbarrow: metallic, most resonant
       {1200, 4200, 0.35f, 0.85f, 12}, // Bird forest ambience: steady bed, chirps laced through
-      {1200, 4600, 0.4f, 0.85f, 9},   // Birds waking: dawn chorus, livelier
+      {1200, 3800, 0.35f, 0.7f, 12},  // Birds waking: dawn chorus -- toned down, ran busy at full brightness/gain
       {1100, 3800, 0.35f, 0.85f, 13}, // Evening birds: calmer, built to loop
     }};
     return table;

@@ -89,11 +89,12 @@ class Scene {
       {{18, 26, 64}, {205, 218, 240}},  // genuinely blue ground, ice-blue ink
       {{15, 15, 19}, {212, 212, 217}},  // near-neutral dark ground, pale silver ink
     };
-    static const Palette birds[2] = {
+    static const Palette birds[3] = {
       {{18, 22, 16}, {200, 205, 180}},  // dark mossy-green ground, pale warm ink (forest/dawn)
       {{24, 18, 28}, {215, 195, 210}},  // dark plum ground, pale lilac ink (dusk)
+      {{18, 24, 58}, {200, 212, 235}},  // blue ground, the same family accent as Rain's blue palette
     };
-    static const std::array<BankPalettes, bankCount> table{{ {rain, 3}, {birds, 2} }};
+    static const std::array<BankPalettes, bankCount> table{{ {rain, 3}, {birds, 3} }};
     return table;
   }
   static DriftKind driftForBank(unsigned b) { return b == 0 ? Fall : Drift; }
