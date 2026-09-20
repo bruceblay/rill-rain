@@ -1,6 +1,6 @@
 # Contributing
 
-Rill Field is developed by listening and watching on the StickS3, the same way as Rill. Describe the textural behavior a change improves, and include a seed when reporting a reproducible issue.
+Rill Rain is developed by listening and watching on the StickS3, the same way as Rill. Describe the textural behavior a change improves, and include a seed when reporting a reproducible issue.
 
 Run `python tools/test.py --sanitize` and `pio run` before proposing a change. Keep the audio path allocation-free and bounded. Preserve the ability to run both engines on a host computer.
 
