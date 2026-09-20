@@ -164,21 +164,25 @@ class Engine {
   }
 
   // Punch magnitudes vary by bank, not just by punch type: Birds and
-  // Insects run identical, bigger/wobblier smears (more feedback, more mix)
-  // and a wider pitch-wobble range than Rain, so both occasionally tip into
-  // something a little surreal rather than staying a tasteful accent
-  // throughout.
+  // Insects run identical, bigger/wobblier smears and Delay Throws (more
+  // feedback, more mix) and a wider pitch-wobble range than Rain, so both
+  // occasionally tip into something a little surreal rather than staying a
+  // tasteful accent throughout. Delay Throw's own feedback/mix used to be a
+  // flat constant regardless of bank; pushed further and made bank-aware
+  // alongside Smear after direct feedback that the delay effects "could
+  // still stand to be a bit more extreme."
   struct PunchStyle {
+    float delayThrowFeedback, delayThrowMix;
     float smearFeedback, smearMix, smearWobbleAmp;
     unsigned smearTapBase, smearTapRange;
     float pitchLow, pitchRange;
   };
   static const std::array<PunchStyle, bankCount>& punchStyles() {
     static const std::array<PunchStyle, bankCount> table{{
-      {0.45f, 0.50f, 40.0f, 3, 4, 0.82f, 0.32f},  // Rain: as originally tuned
-      {0.72f, 0.78f, 100.0f, 4, 8, 0.65f, 0.55f}, // Birds: bigger smear, more feedback, wider pitch swing
-      {0.72f, 0.78f, 100.0f, 4, 8, 0.65f, 0.55f}, // Insects: kept identical to Birds
-      {0.55f, 0.60f, 70.0f, 4, 6, 0.72f, 0.45f},  // Ocean: big, wide smears fit rolling waves and dolphin calls
+      {0.42f, 0.48f, 0.58f, 0.65f, 55.0f, 3, 5, 0.82f, 0.32f},   // Rain: pushed up from the original tuning
+      {0.60f, 0.68f, 0.88f, 0.90f, 140.0f, 4, 10, 0.65f, 0.55f}, // Birds: bigger smear/throw, wider pitch swing
+      {0.60f, 0.68f, 0.88f, 0.90f, 140.0f, 4, 10, 0.65f, 0.55f}, // Insects: kept identical to Birds
+      {0.50f, 0.58f, 0.72f, 0.78f, 95.0f, 4, 8, 0.72f, 0.45f},   // Ocean: big, wide smears fit a rolling sea
     }};
     return table;
   }
@@ -332,8 +336,8 @@ class Engine {
     bool smear = punchType == PunchSmear;
     const PunchStyle& ps = punchStyles()[bank];
     float delayProgress = (punchType == PunchDelayThrow || smear) ? std::sin(punchProgress() * pi) : 0;
-    delayFeedback += ((smear ? ps.smearFeedback : 0.30f) * delayProgress - delayFeedback) / (rate * 0.05f);
-    delayMix += ((smear ? ps.smearMix : 0.35f) * delayProgress - delayMix) / (rate * 0.05f);
+    delayFeedback += ((smear ? ps.smearFeedback : ps.delayThrowFeedback) * delayProgress - delayFeedback) / (rate * 0.05f);
+    delayMix += ((smear ? ps.smearMix : ps.delayThrowMix) * delayProgress - delayMix) / (rate * 0.05f);
     // Smear wobbles its tap length and darkens each repeat, so the echoes
     // blur into the bed instead of reading as a discrete, clean echo.
     smearWobblePhase += smearWobbleStep; if (smearWobblePhase > 2 * pi) smearWobblePhase -= 2 * pi;
