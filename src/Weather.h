@@ -32,14 +32,14 @@
 // Deliberately decoupled from Field.h -- this header knows nothing of
 // field::Bank -- but its own bankCount and per-bank palette/drift/shape
 // tables are meant to track field::bankCount 1:1, kept in sync by hand
-// (bank index order: Rain, Birds, Insects, Ocean). Adding a bank means a
-// new entry in each table, not a restructure.
+// (bank index order: Rain, Birds, Insects, Ocean, Cave). Adding a bank
+// means a new entry in each table, not a restructure.
 namespace weather {
 class Scene {
  public:
   static constexpr unsigned width = 240, height = 135;
   static constexpr unsigned particleCount = 48;
-  static constexpr unsigned bankCount = 4;
+  static constexpr unsigned bankCount = 5;
 
  private:
   struct Color { float r, g, b; };
@@ -134,11 +134,17 @@ class Scene {
       {20, 35, 70},   // dark navy
       {70, 50, 25},   // deep sandy brown
     };
+    static const Color caveInks[3] = {
+      {200, 195, 185}, // pale limestone
+      {180, 190, 200}, // pale cool grey
+      {210, 200, 175}, // pale sandstone
+    };
     static const std::array<BankPalette, bankCount> table{{
       {{16, 20, 30}, rainInks, 3},     // Rain: moody charcoal-blue ground
       {{130, 195, 240}, birdInks, 3},  // Birds: light sky-blue ground, dark ink -- birds against open sky
       {{160, 215, 130}, insectInks, 3},// Insects: light green ground, dark ink
       {{110, 195, 220}, oceanInks, 3}, // Ocean: lighter turquoise water, dark ink, bubbles rising
+      {{28, 26, 24}, caveInks, 3},     // Cave: dark stone ground, pale mineral ink, drips falling
     }};
     return table;
   }
@@ -147,6 +153,7 @@ class Scene {
       case 0: return Fall;
       case 2: return Dart;
       case 3: return Rise;
+      case 4: return Fall;
       default: return Drift;
     }
   }

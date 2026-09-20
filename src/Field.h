@@ -53,16 +53,21 @@ constexpr unsigned steps = 16;
 // A body-sounds bank
 // (heartbeat, breathing) was tried and dropped: not interesting enough to
 // keep, and Ocean read as more distinct from the other three banks anyway.
-// The engine and its effects are generic over "whatever clips are in the
-// current bank," so each bank is just more Texture entries, more
-// Character rows and a BankRange -- tap still only picks within the
-// current bank, shake (newBank()) is the only thing that crosses a bank
-// boundary.
+// A fifth bank, Cave, has two digitally-composited underground ambiences
+// (rain, drips and reverberation, built by BigSoundBank from field
+// recordings rather than captured as one take) -- kept to two short clips
+// for now, both quite dynamic (sharp drips against long quiet stretches),
+// so their gain runs well above the other banks'. The engine and its
+// effects are generic over "whatever clips are in the current bank," so
+// each bank is just more Texture entries, more Character rows and a
+// BankRange -- tap still only picks within the current bank, shake
+// (newBank()) is the only thing that crosses a bank boundary.
 enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow,
                            BirdForest, BirdWake, BirdEvening,
                            InsectNight, InsectCrickets, InsectFieldCricket, InsectGrasshopper,
-                           OceanWaves1, OceanWaves2, OceanUnderwater, textureCount };
-enum Bank : unsigned { BankRain = 0, BankBirds, BankInsects, BankOcean, bankCount };
+                           OceanWaves1, OceanWaves2, OceanUnderwater,
+                           CaveOne, CaveTwo, textureCount };
+enum Bank : unsigned { BankRain = 0, BankBirds, BankInsects, BankOcean, BankCave, bankCount };
 enum Punch : unsigned { PunchNone = 0, PunchPitchWobble, PunchDelayThrow, PunchCrush, PunchReverb, PunchSmear, punchCount };
 
 class Engine {
@@ -149,6 +154,8 @@ class Engine {
       {900, 3200, 0.35f, 0.9f, 13},   // Sea waves (Atlantic shore): steady rolling wash
       {900, 3000, 0.35f, 0.9f, 12},   // Sea waves (moderate, swirls): a touch darker
       {900, 2800, 0.4f, 0.9f, 12},    // Underwater hydrophone (waterfall): muffled, continuous rushing texture
+      {900, 3000, 0.45f, 2.0f, 11},   // Cave #1: composited drips + reverb, raised gain -- sharp/quiet dynamic range
+      {900, 2900, 0.45f, 2.0f, 13},   // Cave #2: same idea, a touch darker and slower
     }};
     return table;
   }
@@ -159,6 +166,7 @@ class Engine {
       {BirdForest, 3},  // all three bird clips
       {InsectNight, 4}, // all four insect clips
       {OceanWaves1, 3}, // all three ocean clips
+      {CaveOne, 2},     // both cave clips
     }};
     return table;
   }
@@ -183,6 +191,7 @@ class Engine {
       {0.60f, 0.68f, 0.88f, 0.90f, 140.0f, 4, 10, 0.65f, 0.55f}, // Birds: bigger smear/throw, wider pitch swing
       {0.60f, 0.68f, 0.88f, 0.90f, 140.0f, 4, 10, 0.65f, 0.55f}, // Insects: kept identical to Birds
       {0.50f, 0.58f, 0.72f, 0.78f, 95.0f, 4, 8, 0.72f, 0.45f},   // Ocean: big, wide smears fit a rolling sea
+      {0.50f, 0.58f, 0.72f, 0.78f, 95.0f, 4, 8, 0.72f, 0.45f},   // Cave: kept identical to Ocean for now
     }};
     return table;
   }
@@ -307,7 +316,7 @@ class Engine {
   unsigned currentBank() const { return bank; }
   unsigned barCount() const { return bar; }
   unsigned currentPunch() const { return punchType; }
-  uint32_t displayInfo() const { return (generation << 11) | (texture << 7) | tempo; }
+  uint32_t displayInfo() const { return (generation << 12) | (texture << 7) | tempo; }
   bool drainBarTick() { bool t = barTick; barTick = false; return t; }
 
   float sample() {

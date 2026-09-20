@@ -22,6 +22,8 @@
 | OceanWaves1 | Sea Waves | Joseph Sardin | [bigsoundbank.com/sea-waves-s0698.html](https://bigsoundbank.com/sea-waves-s0698.html) | CC0 1.0 |
 | OceanWaves2 | Sea: Waves | Joseph Sardin | [bigsoundbank.com/sea-waves-s0266.html](https://bigsoundbank.com/sea-waves-s0266.html) | CC0 1.0 |
 | OceanUnderwater | Underwater (hydrophone recording of a waterfall) | Joseph Sardin & Axeline T. | [bigsoundbank.com/underwater-s3430.html](https://bigsoundbank.com/underwater-s3430.html) | CC0 1.0 |
+| CaveOne | Cave #1 | Joseph Sardin (composited from LaSonotheque source sounds) | [bigsoundbank.com/cave-1-s2135.html](https://bigsoundbank.com/cave-1-s2135.html) | CC0 1.0 |
+| CaveTwo | Cave #2 | Joseph Sardin (composited from LaSonotheque source sounds) | [bigsoundbank.com/cave-2-s2136.html](https://bigsoundbank.com/cave-2-s2136.html) | CC0 1.0 |
 
 This started as three textures (Water, Rain, Wind); Water and Wind were dropped and Rain expanded to six surfaces once the project became rain-specific. Birds and Insects were added after that as further banks. A cicada clip was tried in Insects and dropped ("off-putting"); a field cricket and a lone night grasshopper were added later for variety (two clips per bank "feels very repetitive"). A Body bank (heartbeat, breathing) was tried and dropped entirely ("not very interesting"), replaced by Ocean. Ocean's third clip went through several tries: a humpback whale song read as too weak/low on this speaker; a bottlenose dolphin's sharp repeated clicks were unpleasant on a loop ("a bad sound to hear repetitively"); a Weddell seal trill was downloaded and tuned but never embedded once its license turned out to be unverified (see below); a tern-calls wave recording was avoided from the start, to keep Ocean from being mistaken for the Birds bank. The underwater hydrophone recording -- an ocean sound rather than an ocean animal -- avoided all of these problems and is cleanly CC0. See CHANGELOG.md and NOTES.md for that history.
 
@@ -29,12 +31,14 @@ Two NOAA Fisheries marine-mammal clips were tried earlier (humpback whale, bottl
 
 CC0 requires no attribution and permits commercial use, modification and redistribution (confirmed against BigSoundBank's own license page before downloading; this table exists anyway because "I found it on a site that says free" isn't the same as recording the actual license). Credited here as good practice, not because CC0 requires it.
 
+Cave #1 and #2 are the only clips here that aren't raw field recordings: BigSoundBank built them digitally from LaSonotheque source sounds (rain, drips, reverberation), rather than capturing one real take. Still CC0, still worth replacing with an original recording eventually like everything else in this table.
+
 ## Processing applied
 
 Each source was downloaded at its native rate (48 kHz, 16 or 24-bit, mono or stereo), then, with `ffmpeg`:
 
-1. Trimmed to an excerpt from a point that avoided obvious handling noise or scene changes at the recording's start/end (exact offsets: rain +3s, puddle +5s, concrete +5s, terrace +30s, tarpaulin +10s, wheelbarrow +20s, forest +5s, birds waking +30s, evening birds +30s, nocturnal insects +30s, crickets/frogs +60s, field cricket +5s, grasshopper +0s, sea waves +20s, sea swirls +5s, underwater +10s). Rain and Birds clips are 8 seconds; Insects and Ocean are 6 seconds.
+1. Trimmed to an excerpt from a point that avoided obvious handling noise or scene changes at the recording's start/end (exact offsets: rain +3s, puddle +5s, concrete +5s, terrace +30s, tarpaulin +10s, wheelbarrow +20s, forest +5s, birds waking +30s, evening birds +30s, nocturnal insects +30s, crickets/frogs +60s, field cricket +5s, grasshopper +0s, sea waves +20s, sea swirls +5s, underwater +10s, cave #1 +10s, cave #2 +10s). Rain and Birds clips are 8 seconds; Insects and Ocean are 6 seconds; the two Cave clips are 3 seconds -- shorter than everything else, to fit the flash budget once a fifth bank was added.
 2. Downmixed to mono and resampled to 32000 Hz to match `field::rate`.
-3. Loudness-normalized (`loudnorm=I=-18:TP=-2:LRA=7`) so the clips sit at a comparable level; the raw downloads varied enough in level that one would have dominated the mix.
+3. Loudness-normalized (`loudnorm=I=-18:TP=-2:LRA=7`) so the clips sit at a comparable level; the raw downloads varied enough in level that one would have dominated the mix. Cave's drips are peaky against long quiet stretches, so its Character gain runs well above the other banks' even after this normalization.
 
-The flash layout is a single factory app slot (`partitions_field.csv`, no OTA), grown once already (from ~7 MB to ~7.6 MB) to make room for these clips. It now sits at ~97% of that partition (~212 KB free) -- the next bank or any lengthening of an existing clip will need shorter/fewer clips or another partition grow into the remaining unallocated space on the 8 MB chip.
+The flash layout is a single factory app slot (`partitions_field.csv`, no OTA), grown twice now (7 MB to 7.6 MB to fit Insects, then 7.6 MB to ~7.87 MB to fit Cave) to make room for these clips. It now sits at ~99.6% of that partition (~30 KB free) -- this is the practical ceiling. Anything more will need to trim or drop an existing clip; there's no meaningful unallocated flash left on the 8 MB chip to grow into.

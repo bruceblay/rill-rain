@@ -5,5 +5,5 @@
 # binary rather than a filesystem, so the freed space goes to headroom for
 # more/longer samples instead of a second copy of the firmware.
 nvs,      data, nvs,      0x9000,  0x5000,
-factory,  app,  factory,  0x10000, 0x7A0000,
-coredump, data, coredump, 0x7B0000,0x10000,
+factory,  app,  factory,  0x10000, 0x7E0000,
+coredump, data, coredump, 0x7F0000,0x8000,

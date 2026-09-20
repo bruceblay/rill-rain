@@ -100,7 +100,8 @@ int main() {
       {field::Rain, field::BirdForest},
       {field::BirdForest, field::InsectNight},
       {field::InsectNight, field::OceanWaves1},
-      {field::OceanWaves1, field::textureCount},
+      {field::OceanWaves1, field::CaveOne},
+      {field::CaveOne, field::textureCount},
     };
     field::Engine engine(3);
     assert(engine.currentBank() == field::BankRain);

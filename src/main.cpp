@@ -55,7 +55,7 @@ void draw() {
   d.fillScreen(0x1082);
   d.setTextColor(0xD692, 0x1082);
   d.setTextSize(3);
-  static const char* banks[] = {"RAIN", "BIRDS", "BUGS", "OCEAN"};
+  static const char* banks[] = {"RAIN", "BIRDS", "BUGS", "OCEAN", "CAVE"};
   d.setCursor(16, 14); d.print(banks[engine.currentBank()]);
   d.drawFastHLine(16, 48, 208, 0x4208);
   d.setTextSize(2);
@@ -63,9 +63,10 @@ void draw() {
   static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw",
                                     "Forest", "Dawn", "Dusk",
                                     "Night", "Meadow", "Cricket", "Hopper",
-                                    "Waves", "Swirls", "Underwtr"};
-  d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 15]);
-  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 11), unsigned(info & 127), engine.barCount());
+                                    "Waves", "Swirls", "Underwtr",
+                                    "Drip 1", "Drip 2"};
+  d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 31]);
+  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 12), unsigned(info & 127), engine.barCount());
   d.setCursor(16, 108);
   if (playing) d.printf("Vol %u%%", unsigned(volume) * 100 / 255);
   else d.print("resting");
@@ -110,7 +111,7 @@ void loop() {
   if (M5.BtnA.wasHold()) { playing = !playing; changed = true; }
   static uint32_t lastScene = 0;
   uint32_t currentScene = sceneInfo.load();
-  const bool newTexture = lastScene != 0 && (currentScene >> 11) != (lastScene >> 11);
+  const bool newTexture = lastScene != 0 && (currentScene >> 12) != (lastScene >> 12);
   if (currentScene != lastScene) { lastScene = currentScene; changed = true; }
   if (M5.BtnB.wasClicked()) {
     volume = volume >= 255 ? 45 : volume + 30;
@@ -144,8 +145,8 @@ void loop() {
     report = millis();
     Serial.printf("render worst=%lu us / 16000 us; queue errors=%lu; heap=%u; generation=%lu BPM=%lu texture=%lu visual=%u visual_us=%lu\n",
       (unsigned long)worstRenderUs.load(), (unsigned long)queueErrors.load(), ESP.getFreeHeap(),
-      (unsigned long)(currentScene >> 11), (unsigned long)(currentScene & 127),
-      (unsigned long)((currentScene >> 7) & 15),
+      (unsigned long)(currentScene >> 12), (unsigned long)(currentScene & 127),
+      (unsigned long)((currentScene >> 7) & 31),
       scene.generation(),(unsigned long)worstVisualUs);
   }
   delay(10);
