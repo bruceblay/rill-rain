@@ -27,6 +27,16 @@ Device-to-device ensemble sync -- so a Rill Rain unit could lock its sweep and b
 
 Playback state is not saved across restarts.
 
+## On the device
+
+The visual is one continuous field of falling particles, not a catalog of families like Rill's or Rill Drums' -- this project's focus is the audio, and the screen only needs to read as rain that's alive. A bar boundary briefly brightens a particle near the top, a visible tell for the rhythm that's otherwise only in the audio's filter sweep. Shake cycles the palette.
+
+| | | |
+| --- | --- | --- |
+| ![Falling rain visual, grey-blue palette](docs/images/rain-visual-1.png) | ![Falling rain visual, deeper blue palette](docs/images/rain-visual-2.png) | ![Falling rain visual, pale silver palette](docs/images/rain-visual-3.png) |
+
+These are host-rendered previews (`tools/visual_preview.cpp`), pixel-identical to what the firmware pushes to the real screen, not photos of the device -- the animation and bar-tick highlight don't show in a still frame.
+
 ## Hardware
 
 Supported and tested: **M5Stack StickS3**, with ESP32-S3, 8 MB flash, display, IMU and built-in speaker. Other ESP32 boards and earlier M5Stick models are not supported by this configuration.
