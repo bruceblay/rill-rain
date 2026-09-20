@@ -44,7 +44,7 @@ class Scene {
   struct Color { float r, g, b; };
   struct BankPalette { Color background; const Color* inks; unsigned inkCount; };
   struct Particle { float x, y, speed, size, phase; };
-  enum DriftKind : unsigned { Fall = 0, Drift, Dart };
+  enum DriftKind : unsigned { Fall = 0, Drift, Dart, Rise };
   enum ShapeKind : unsigned { Round = 0, Chevron };
   std::array<uint16_t, width * height> frame{};
   uint32_t rng;
@@ -128,16 +128,16 @@ class Scene {
       {225, 195, 120}, // pale amber
       {200, 215, 220}, // pale moonlit blue-white
     };
-    static const Color bodyInks[3] = {
-      {220, 195, 185}, // warm blush
-      {200, 160, 160}, // muted rose
-      {225, 210, 195}, // pale cream
+    static const Color oceanInks[3] = {
+      {200, 230, 225}, // pale sea-foam white
+      {225, 210, 180}, // pale sandy tan
+      {190, 220, 205}, // pale seafoam green
     };
     static const std::array<BankPalette, bankCount> table{{
       {{16, 20, 30}, rainInks, 3},     // Rain: moody charcoal-blue ground
       {{130, 195, 240}, birdInks, 3},  // Birds: light sky-blue ground, dark ink -- birds against open sky
       {{8, 10, 8}, insectInks, 3},     // Insects: true near-black night
-      {{35, 15, 20}, bodyInks, 3},     // Body: dark maroon, intimate
+      {{10, 35, 40}, oceanInks, 3},    // Ocean: deep teal water, pale foam/sand ink
     }};
     return table;
   }
@@ -145,6 +145,7 @@ class Scene {
     switch (b) {
       case 0: return Fall;
       case 2: return Dart;
+      case 3: return Rise;
       default: return Drift;
     }
   }
@@ -194,6 +195,11 @@ class Scene {
           p.y += std::cos(phase * 11.0f + p.phase * 5.0f) * p.speed * dt * 40;
           if (p.x < -2) p.x = width + 2; else if (p.x > width + 2) p.x = -2;
           if (p.y < -2) p.y = height + 2; else if (p.y > height + 2) p.y = -2;
+          break;
+        case Rise: // ocean: bubbles drifting upward with a slight wobble
+          p.y -= p.speed * dt * 20;
+          p.x += std::sin(phase * 0.4f + p.phase) * dt * 4;
+          if (p.y < -2) { p.y = height + 2; p.x = unit() * width; }
           break;
         default: // Fall
           p.y += p.speed * dt * 60;

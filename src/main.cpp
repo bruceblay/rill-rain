@@ -55,15 +55,15 @@ void draw() {
   d.fillScreen(0x1082);
   d.setTextColor(0xD692, 0x1082);
   d.setTextSize(3);
-  static const char* banks[] = {"RAIN", "BIRDS", "BUGS", "BODY"};
+  static const char* banks[] = {"RAIN", "BIRDS", "BUGS", "OCEAN"};
   d.setCursor(16, 14); d.print(banks[engine.currentBank()]);
   d.drawFastHLine(16, 48, 208, 0x4208);
   d.setTextSize(2);
   uint32_t info = sceneInfo.load();
   static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw",
                                     "Forest", "Dawn", "Dusk",
-                                    "Night", "Cicada", "Meadow",
-                                    "Heart", "Breath"};
+                                    "Night", "Meadow",
+                                    "Waves", "Swirls", "Whale"};
   d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 15]);
   d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 11), unsigned(info & 127), engine.barCount());
   d.setCursor(16, 108);

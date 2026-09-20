@@ -99,8 +99,8 @@ int main() {
     static const Range ranges[field::bankCount] = {
       {field::Rain, field::BirdForest},
       {field::BirdForest, field::InsectNight},
-      {field::InsectNight, field::BodyHeartbeat},
-      {field::BodyHeartbeat, field::textureCount},
+      {field::InsectNight, field::OceanWaves1},
+      {field::OceanWaves1, field::textureCount},
     };
     field::Engine engine(3);
     assert(engine.currentBank() == field::BankRain);
