@@ -29,22 +29,23 @@
 // against open sky rather than stars against night.
 //
 // Deliberately decoupled from Field.h -- this header knows nothing of
-// field::Bank -- but its own bankCount and per-bank palette/drift tables are
-// meant to track field::bankCount 1:1, kept in sync by hand. Adding a bank
-// (body sounds, insects) means a new entry in bankPalettes() and a new
-// DriftKind case, not a restructure.
+// field::Bank -- but its own bankCount and per-bank palette/drift/shape
+// tables are meant to track field::bankCount 1:1, kept in sync by hand
+// (bank index order: Rain, Birds, Insects, Body). Adding a bank means a
+// new entry in each table, not a restructure.
 namespace weather {
 class Scene {
  public:
   static constexpr unsigned width = 240, height = 135;
   static constexpr unsigned particleCount = 48;
-  static constexpr unsigned bankCount = 2;
+  static constexpr unsigned bankCount = 4;
 
  private:
   struct Color { float r, g, b; };
   struct BankPalette { Color background; const Color* inks; unsigned inkCount; };
   struct Particle { float x, y, speed, size, phase; };
-  enum DriftKind : unsigned { Fall = 0, Drift };
+  enum DriftKind : unsigned { Fall = 0, Drift, Dart };
+  enum ShapeKind : unsigned { Round = 0, Chevron };
   std::array<uint16_t, width * height> frame{};
   uint32_t rng;
   unsigned bank = 0, inkIndex = 0, count = 0;
@@ -100,8 +101,10 @@ class Scene {
   }
   void resetParticles() {
     // Birds get a bit more wingspan than rain gets dot size, so the
-    // two-stroke chevron actually reads at this resolution.
-    float sizeMul = driftForBank(bank) == Drift ? 1.6f : 1.0f;
+    // two-stroke chevron actually reads at this resolution. Insects go the
+    // other way -- tiny darting specks.
+    float sizeMul = shapeForBank(bank) == Chevron ? 1.6f
+                  : driftForBank(bank) == Dart ? 0.6f : 1.0f;
     for (auto& p : particles) {
       p.x = unit() * width; p.y = unit() * height;
       p.speed = 0.4f + unit() * 0.8f;
@@ -120,13 +123,32 @@ class Scene {
       {90, 45, 68},   // dark wine (dusk)
       {35, 45, 75},   // dark navy (neutral)
     };
+    static const Color insectInks[3] = {
+      {215, 225, 140}, // pale firefly yellow-green
+      {225, 195, 120}, // pale amber
+      {200, 215, 220}, // pale moonlit blue-white
+    };
+    static const Color bodyInks[3] = {
+      {220, 195, 185}, // warm blush
+      {200, 160, 160}, // muted rose
+      {225, 210, 195}, // pale cream
+    };
     static const std::array<BankPalette, bankCount> table{{
-      {{16, 20, 30}, rainInks, 3},    // Rain: moody charcoal-blue ground
-      {{130, 195, 240}, birdInks, 3}, // Birds: light sky-blue ground, dark ink -- birds against open sky
+      {{16, 20, 30}, rainInks, 3},     // Rain: moody charcoal-blue ground
+      {{130, 195, 240}, birdInks, 3},  // Birds: light sky-blue ground, dark ink -- birds against open sky
+      {{8, 10, 8}, insectInks, 3},     // Insects: true near-black night
+      {{35, 15, 20}, bodyInks, 3},     // Body: dark maroon, intimate
     }};
     return table;
   }
-  static DriftKind driftForBank(unsigned b) { return b == 0 ? Fall : Drift; }
+  static DriftKind driftForBank(unsigned b) {
+    switch (b) {
+      case 0: return Fall;
+      case 2: return Dart;
+      default: return Drift;
+    }
+  }
+  static ShapeKind shapeForBank(unsigned b) { return b == 1 ? Chevron : Round; }
 
  public:
   explicit Scene(uint32_t value = 23) { seed(value); }
@@ -158,11 +180,18 @@ class Scene {
     breath += (float(beat) - breath) * std::min(1.0f, dt * 3);
     frame.fill(backgroundPacked);
     DriftKind drift = driftForBank(bank);
+    ShapeKind shape = shapeForBank(bank);
     for (auto& p : particles) {
       switch (drift) {
         case Drift: // birds: gentle wander, no fixed direction
           p.x += std::sin(phase * 0.5f + p.phase) * p.speed * dt * 10;
           p.y += std::cos(phase * 0.3f + p.phase) * p.speed * dt * 6;
+          if (p.x < -2) p.x = width + 2; else if (p.x > width + 2) p.x = -2;
+          if (p.y < -2) p.y = height + 2; else if (p.y > height + 2) p.y = -2;
+          break;
+        case Dart: // insects: quick jittery darting, no fixed direction
+          p.x += std::sin(phase * 9.0f + p.phase * 7.0f) * p.speed * dt * 40;
+          p.y += std::cos(phase * 11.0f + p.phase * 5.0f) * p.speed * dt * 40;
           if (p.x < -2) p.x = width + 2; else if (p.x > width + 2) p.x = -2;
           if (p.y < -2) p.y = height + 2; else if (p.y > height + 2) p.y = -2;
           break;
@@ -172,7 +201,7 @@ class Scene {
       }
       float shimmer = 0.5f + 0.5f * std::sin(phase * 1.3f + p.phase);
       float shade = 0.4f + shimmer * 0.6f;
-      if (drift == Drift) bird(p.x, p.y, p.size, phase * 8.0f + p.phase * 3.0f, shade);
+      if (shape == Chevron) bird(p.x, p.y, p.size, phase * 8.0f + p.phase * 3.0f, shade);
       else dot(p.x, p.y, p.size, shade);
     }
     if (beat) dot(unit() * width, height * 0.12f, 3, 0.75f + breath * 0.25f);

@@ -70,47 +70,57 @@ int main() {
   }
   std::cout << "Loop crossfade stays within the jump bound\n";
 
-  // Birds runs a wider punch style (bigger smear, wider pitch swing) than
-  // Rain's original tuning; confirm it stays within the same bound.
-  for (uint32_t seed : {1u, 2u, 3u, 4u}) {
-    field::Engine engine(seed);
-    engine.newBank(); // force into Birds
-    float previous = 0, peak = 0, jump = 0;
-    for (unsigned i = 0; i < field::rate * 120; ++i) {
-      if (i && i % (field::rate * 15) == 0) engine.newVariation();
-      float s = engine.sample();
-      assert(std::isfinite(s) && std::abs(s) < 0.95f);
-      peak = std::max(peak, std::abs(s));
-      jump = std::max(jump, std::abs(s - previous));
-      previous = s;
+  // Each bank's punch style (Birds and Insects run bigger than Rain's
+  // original tuning; Body is deliberately kept conservative) must still
+  // stay within headroom and the jump bound.
+  for (unsigned bankIndex = 0; bankIndex < field::bankCount; ++bankIndex) {
+    for (uint32_t seed : {1u, 2u, 3u, 4u}) {
+      field::Engine engine(seed);
+      while (engine.currentBank() != bankIndex) engine.newBank();
+      float previous = 0, peak = 0, jump = 0;
+      for (unsigned i = 0; i < field::rate * 120; ++i) {
+        if (i && i % (field::rate * 15) == 0) engine.newVariation();
+        float s = engine.sample();
+        assert(std::isfinite(s) && std::abs(s) < 0.95f);
+        peak = std::max(peak, std::abs(s));
+        jump = std::max(jump, std::abs(s - previous));
+        previous = s;
+      }
+      assert(peak > 0.02f && jump < 1.3f);
     }
-    assert(peak > 0.02f && jump < 1.3f);
   }
-  std::cout << "Birds' wider punch style stays within headroom and the jump bound\n";
+  std::cout << "Every bank's punch style stays within headroom and the jump bound\n";
 
   // Shake (newBank()) is the only thing that crosses a bank boundary; tap
-  // (newVariation()) must never leave the current bank on its own.
+  // (newVariation()) must never leave the current bank on its own. Bank
+  // texture ranges below mirror Field.h's Texture enum order.
   {
+    struct Range { unsigned lo, hi; }; // [lo, hi)
+    static const Range ranges[field::bankCount] = {
+      {field::Rain, field::BirdForest},
+      {field::BirdForest, field::InsectNight},
+      {field::InsectNight, field::BodyHeartbeat},
+      {field::BodyHeartbeat, field::textureCount},
+    };
     field::Engine engine(3);
     assert(engine.currentBank() == field::BankRain);
     for (unsigned i = 0; i < 20; ++i) {
       engine.newVariation();
       assert(engine.currentBank() == field::BankRain);
-      assert(engine.currentTexture() < 6); // still within the rain bank
+      assert(engine.currentTexture() < ranges[field::BankRain].hi);
     }
     unsigned banksSeen = 1u << engine.currentBank();
     unsigned textureBits = 0;
-    for (unsigned i = 0; i < 40; ++i) {
+    for (unsigned i = 0; i < 400; ++i) {
       engine.newBank();
-      banksSeen |= 1u << engine.currentBank();
-      textureBits |= 1u << engine.currentTexture();
-      if (engine.currentBank() == field::BankBirds)
-        assert(engine.currentTexture() >= field::BirdForest && engine.currentTexture() < field::textureCount);
-      else
-        assert(engine.currentTexture() < 6);
+      unsigned b = engine.currentBank(), t = engine.currentTexture();
+      banksSeen |= 1u << b;
+      textureBits |= 1u << t;
+      assert(t >= ranges[b].lo && t < ranges[b].hi);
     }
-    assert(banksSeen == 0x3u); // both banks visited
-    std::cout << "Shake crosses banks, tap stays within one; textures touched=0x"
-              << std::hex << textureBits << std::dec << "\n";
+    assert(banksSeen == (1u << field::bankCount) - 1); // every bank visited
+    assert(textureBits == (1u << field::textureCount) - 1); // every texture reachable
+    std::cout << "Shake crosses banks, tap stays within one; all " << field::bankCount
+              << " banks and " << field::textureCount << " textures reachable\n";
   }
 }
