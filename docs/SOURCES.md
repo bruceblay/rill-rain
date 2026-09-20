@@ -2,7 +2,7 @@
 
 `src/Samples.h` is generated from real field recordings by `tools/embed_samples.py`, not written by hand. The raw downloads are not kept in this repository (they're much larger than the trimmed clips actually embedded); this file is the record of where each embedded clip came from and under what license, so anyone auditing the repo doesn't have to reverse-engineer PCM data to find out.
 
-**These are placeholders.** Bruce intends to replace them with his own recordings; when that happens, update this file to describe the new source (self-recorded, date, location, equipment) and delete the corresponding row below.
+**These are placeholders**, expected to be replaced with original field recordings. When that happens, update this file to describe the new source (self-recorded, date, location, equipment) and delete the corresponding row below.
 
 | Texture | Title | Author | Source | License |
 | --- | --- | --- | --- | --- |
@@ -25,4 +25,4 @@ Each source was downloaded at its native rate (48 kHz, 16 or 24-bit, mono or ste
 2. Downmixed to mono and resampled to 32000 Hz to match `field::rate`.
 3. Loudness-normalized (`loudnorm=I=-18:TP=-2:LRA=7`) so the clips sit at a comparable level; the raw downloads varied enough in level that one would have dominated the mix.
 
-8 seconds per clip was chosen for a first listen. The flash layout was since repartitioned to a single ~7 MB factory app slot (`partitions_field.csv`, no OTA) specifically to leave room for more or longer clips -- Bruce's own recordings will likely run longer once he replaces these.
+8 seconds per clip was chosen for a first listen. The flash layout was since repartitioned to a single ~7 MB factory app slot (`partitions_field.csv`, no OTA) specifically to leave room for more or longer clips, since any eventual replacement recordings will likely run longer than these.

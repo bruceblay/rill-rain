@@ -19,7 +19,7 @@ The data view shows the surface, generation, tempo, bar count, volume and batter
 
 An earlier version generated its own noise from scratch (filtered white noise standing in for water/rain/wind), in the spirit of a vintage sound conditioner like the Marsona 1200. That synthesis was rejected by ear as universally bad, the same conclusion reached about Rill Drums' own procedural noise voices, so this project pivoted to real recordings instead:
 
-- **Six rain recordings**, one surface each: an umbrella, a puddle, concrete, a terrace, a plastic tarpaulin, and a metal wheelbarrow -- a steady wash through to increasingly percussive and metallic. All CC0-licensed placeholders (see [docs/SOURCES.md](docs/SOURCES.md)); Bruce intends to replace them with his own field recordings.
+- **Six rain recordings**, one surface each: an umbrella, a puddle, concrete, a terrace, a plastic tarpaulin, and a metal wheelbarrow -- a steady wash through to increasingly percussive and metallic. All CC0-licensed placeholders (see [docs/SOURCES.md](docs/SOURCES.md)), expected to be replaced with original field recordings.
 - **A bar-synced lowpass sweep** stands in for a vintage sound conditioner's Tone/Surf Rate knobs: narrow range, low resonance, slow enough to read as breathing rather than the main event. Its floor is kept above ~700 Hz -- the StickS3's small speaker barely reproduces anything lower (confirmed by Rill Drums' own on-device measurements), so a sweep that dips below that reads as silence, not warmth.
 - **Five punch-in effects** -- Pitch Wobble, Delay Throw, Crush, Reverb, Smear -- one at a time, semi-random, self-clearing after a bar or two, each evolving across its own window rather than sitting at one flat setting. Same direction as Rill Drums' punch-in effects.
 
@@ -104,6 +104,6 @@ Tests cover five simulated minutes of playback per seed, bounded output, a jump/
 
 ## Credits and license
 
-Created by Bruce Blay, in the spirit of [Rill](https://github.com/bruceblay/rill). Developed through iterative on-device listening and viewing, with Claude assisting implementation.
+In the spirit of [Rill](https://github.com/bruceblay/rill). Developed through iterative on-device listening and viewing, with Claude assisting implementation.
 
 Rill Rain follows Rill's parent project Pocket Radio's **GPL-3.0-or-later** license. See [LICENSE](LICENSE). The embedded rain recordings are separately licensed CC0 1.0; see [docs/SOURCES.md](docs/SOURCES.md).
