@@ -40,11 +40,17 @@ constexpr unsigned steps = 16;
 // insect recordings (nocturnal insects+wind, crickets/frogs meadow, a
 // close field cricket, a lone night grasshopper -- a cicada song was tried
 // and dropped as off-putting), and three ocean recordings (two wave
-// textures, one bottlenose dolphin -- clicks/whistles read far better on
-// this speaker than the humpback whale song originally here, which was
-// too low and read as weak; the dolphin clip is a NOAA Fisheries
-// recording, a US federal government work and so public domain rather
-// than CC0 like the rest; see docs/SOURCES.md). A body-sounds bank
+// textures, one underwater hydrophone recording -- a continuous rushing
+// texture that loops cleanly, unlike two ocean-animal sounds tried and
+// rejected before it: a humpback whale song (too low, read as weak) and a
+// bottlenose dolphin (sharp repeated clicks, unpleasant on a loop). A
+// Weddell seal trill was considered as a third try but dropped before
+// ever reaching the device: unlike the whale and dolphin clips (both
+// credited to NOAA's own Passive Acoustics Group and so clearly public
+// domain), the seal recording was credited to an external university
+// researcher merely hosted on a NOAA gallery page, with no license
+// statement covering that hosting -- not established as freely usable.
+// A body-sounds bank
 // (heartbeat, breathing) was tried and dropped: not interesting enough to
 // keep, and Ocean read as more distinct from the other three banks anyway.
 // The engine and its effects are generic over "whatever clips are in the
@@ -55,7 +61,7 @@ constexpr unsigned steps = 16;
 enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow,
                            BirdForest, BirdWake, BirdEvening,
                            InsectNight, InsectCrickets, InsectFieldCricket, InsectGrasshopper,
-                           OceanWaves1, OceanWaves2, OceanDolphin, textureCount };
+                           OceanWaves1, OceanWaves2, OceanUnderwater, textureCount };
 enum Bank : unsigned { BankRain = 0, BankBirds, BankInsects, BankOcean, bankCount };
 enum Punch : unsigned { PunchNone = 0, PunchPitchWobble, PunchDelayThrow, PunchCrush, PunchReverb, PunchSmear, punchCount };
 
@@ -142,7 +148,7 @@ class Engine {
       {1300, 4200, 0.4f, 1.7f, 9},    // Night grasshopper: raised -- also read as quiet next to the crickets
       {900, 3200, 0.35f, 0.9f, 13},   // Sea waves (Atlantic shore): steady rolling wash
       {900, 3000, 0.35f, 0.9f, 12},   // Sea waves (moderate, swirls): a touch darker
-      {1400, 4800, 0.4f, 0.95f, 8},   // Bottlenose dolphin: bright clicks/whistles, faster swell
+      {900, 2800, 0.4f, 0.9f, 12},    // Underwater hydrophone (waterfall): muffled, continuous rushing texture
     }};
     return table;
   }
