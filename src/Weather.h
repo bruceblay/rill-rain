@@ -25,21 +25,21 @@
 // Deliberately decoupled from Field.h -- this header knows nothing of
 // field::Bank -- but its own bankCount and per-bank palette/drift tables are
 // meant to track field::bankCount 1:1, kept in sync by hand. Adding a bank
-// (birds, body sounds, insects) means a new entry in bankPalettes() and a
-// new DriftKind case, not a restructure.
+// (body sounds, insects) means a new entry in bankPalettes() and a new
+// DriftKind case, not a restructure.
 namespace weather {
 class Scene {
  public:
   static constexpr unsigned width = 240, height = 135;
   static constexpr unsigned particleCount = 48;
-  static constexpr unsigned bankCount = 1;
+  static constexpr unsigned bankCount = 2;
 
  private:
   struct Color { float r, g, b; };
   struct Palette { Color ground, ink; };
   struct BankPalettes { const Palette* palettes; unsigned count; };
   struct Particle { float x, y, speed, size, phase; };
-  enum DriftKind : unsigned { Fall = 0 };
+  enum DriftKind : unsigned { Fall = 0, Drift };
   std::array<uint16_t, width * height> frame{};
   uint32_t rng;
   unsigned bank = 0, palette = 0, count = 0;
@@ -89,10 +89,14 @@ class Scene {
       {{18, 26, 64}, {205, 218, 240}},  // genuinely blue ground, ice-blue ink
       {{15, 15, 19}, {212, 212, 217}},  // near-neutral dark ground, pale silver ink
     };
-    static const std::array<BankPalettes, bankCount> table{{ {rain, 3} }};
+    static const Palette birds[2] = {
+      {{18, 22, 16}, {200, 205, 180}},  // dark mossy-green ground, pale warm ink (forest/dawn)
+      {{24, 18, 28}, {215, 195, 210}},  // dark plum ground, pale lilac ink (dusk)
+    };
+    static const std::array<BankPalettes, bankCount> table{{ {rain, 3}, {birds, 2} }};
     return table;
   }
-  static DriftKind driftForBank(unsigned) { return Fall; } // only one drift kind exists so far
+  static DriftKind driftForBank(unsigned b) { return b == 0 ? Fall : Drift; }
 
  public:
   explicit Scene(uint32_t value = 23) { seed(value); }
@@ -126,6 +130,12 @@ class Scene {
     DriftKind drift = driftForBank(bank);
     for (auto& p : particles) {
       switch (drift) {
+        case Drift: // birds: gentle wander, no fixed direction
+          p.x += std::sin(phase * 0.5f + p.phase) * p.speed * dt * 10;
+          p.y += std::cos(phase * 0.3f + p.phase) * p.speed * dt * 6;
+          if (p.x < -2) p.x = width + 2; else if (p.x > width + 2) p.x = -2;
+          if (p.y < -2) p.y = height + 2; else if (p.y > height + 2) p.y = -2;
+          break;
         default: // Fall
           p.y += p.speed * dt * 60;
           if (p.y > height + 2) { p.y = -2; p.x = unit() * width; }

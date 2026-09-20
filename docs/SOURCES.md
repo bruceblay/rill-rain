@@ -12,8 +12,11 @@
 | RainTerrace | Summer Rain on Terrace | Joseph Sardin | [bigsoundbank.com/summer-rain-on-terrace-s1019.html](https://bigsoundbank.com/summer-rain-on-terrace-s1019.html) | CC0 1.0 |
 | RainTarpaulin | Rain on Plastic Tarpaulin | Joseph Sardin | [bigsoundbank.com/rain-on-plastic-tarpaulin-s1292.html](https://bigsoundbank.com/rain-on-plastic-tarpaulin-s1292.html) | CC0 1.0 |
 | RainWheelbarrow | Rain on Wheelbarrow | Joseph Sardin | [bigsoundbank.com/rain-on-wheelbarrow-s1291.html](https://bigsoundbank.com/rain-on-wheelbarrow-s1291.html) | CC0 1.0 |
+| BirdForest | Forest | Joseph Sardin | [bigsoundbank.com/forest-s0100.html](https://bigsoundbank.com/forest-s0100.html) | CC0 1.0 |
+| BirdWake | Birds Waking #3 | Joseph Sardin | [bigsoundbank.com/wake-birds-3-s0999.html](https://bigsoundbank.com/wake-birds-3-s0999.html) | CC0 1.0 |
+| BirdEvening | Evening Birds | Joseph Sardin | [bigsoundbank.com/evening-birds-s1859.html](https://bigsoundbank.com/evening-birds-s1859.html) | CC0 1.0 |
 
-This started as three textures (Water, Rain, Wind); Water and Wind were dropped and Rain expanded to five surfaces once the project became rain-specific -- see CHANGELOG.md and NOTES.md for that history.
+This started as three textures (Water, Rain, Wind); Water and Wind were dropped and Rain expanded to six surfaces once the project became rain-specific. A second bank, Birds, was added after that -- see CHANGELOG.md and NOTES.md for that history.
 
 CC0 requires no attribution and permits commercial use, modification and redistribution (confirmed against BigSoundBank's own license page before downloading; this table exists anyway because "I found it on a site that says free" isn't the same as recording the actual license). Credited here as good practice, not because CC0 requires it.
 
@@ -21,7 +24,7 @@ CC0 requires no attribution and permits commercial use, modification and redistr
 
 Each source was downloaded at its native rate (48 kHz, 16 or 24-bit, mono or stereo), then, with `ffmpeg`:
 
-1. Trimmed to an 8-second excerpt from a point that avoided obvious handling noise or scene changes at the recording's start/end (exact offsets: rain +3s, puddle +5s, concrete +5s, terrace +30s, tarpaulin +10s, wheelbarrow +20s).
+1. Trimmed to an 8-second excerpt from a point that avoided obvious handling noise or scene changes at the recording's start/end (exact offsets: rain +3s, puddle +5s, concrete +5s, terrace +30s, tarpaulin +10s, wheelbarrow +20s, forest +5s, birds waking +30s, evening birds +30s).
 2. Downmixed to mono and resampled to 32000 Hz to match `field::rate`.
 3. Loudness-normalized (`loudnorm=I=-18:TP=-2:LRA=7`) so the clips sit at a comparable level; the raw downloads varied enough in level that one would have dominated the mix.
 

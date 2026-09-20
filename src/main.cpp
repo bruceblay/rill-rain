@@ -59,9 +59,10 @@ void draw() {
   d.drawFastHLine(16, 48, 208, 0x4208);
   d.setTextSize(2);
   uint32_t info = sceneInfo.load();
-  static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw"};
-  d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 7]);
-  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 10), unsigned(info & 127), engine.barCount());
+  static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw",
+                                    "Forest", "Dawn", "Dusk"};
+  d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 15]);
+  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 11), unsigned(info & 127), engine.barCount());
   d.setCursor(16, 108);
   if (playing) d.printf("Vol %u%%", unsigned(volume) * 100 / 255);
   else d.print("resting");
@@ -106,7 +107,7 @@ void loop() {
   if (M5.BtnA.wasHold()) { playing = !playing; changed = true; }
   static uint32_t lastScene = 0;
   uint32_t currentScene = sceneInfo.load();
-  const bool newTexture = lastScene != 0 && (currentScene >> 10) != (lastScene >> 10);
+  const bool newTexture = lastScene != 0 && (currentScene >> 11) != (lastScene >> 11);
   if (currentScene != lastScene) { lastScene = currentScene; changed = true; }
   if (M5.BtnB.wasClicked()) {
     volume = volume >= 255 ? 45 : volume + 30;
@@ -140,8 +141,8 @@ void loop() {
     report = millis();
     Serial.printf("render worst=%lu us / 16000 us; queue errors=%lu; heap=%u; generation=%lu BPM=%lu texture=%lu visual=%u visual_us=%lu\n",
       (unsigned long)worstRenderUs.load(), (unsigned long)queueErrors.load(), ESP.getFreeHeap(),
-      (unsigned long)(currentScene >> 10), (unsigned long)(currentScene & 127),
-      (unsigned long)((currentScene >> 7) & 7),
+      (unsigned long)(currentScene >> 11), (unsigned long)(currentScene & 127),
+      (unsigned long)((currentScene >> 7) & 15),
       scene.generation(),(unsigned long)worstVisualUs);
   }
   delay(10);

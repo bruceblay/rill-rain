@@ -34,15 +34,17 @@ namespace field {
 constexpr uint32_t rate = 32000;
 constexpr float pi = 3.14159265358979323846f;
 constexpr unsigned steps = 16;
-// Six real recordings of rain hitting different surfaces (umbrella cloth,
-// puddle, concrete, terrace tile, a plastic tarpaulin, a metal wheelbarrow).
-// Grouped into one bank for now; the engine and its effects are generic
-// over "whatever clips are in the current bank," so a future bank (birds,
-// body sounds, insects) is just more Texture entries, more Character rows
-// and a new BankRange -- tap still only picks within the current bank,
-// shake (newBank()) is the only thing that crosses a bank boundary.
-enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow, textureCount };
-enum Bank : unsigned { BankRain = 0, bankCount };
+// Two banks so far: six recordings of rain hitting different surfaces
+// (umbrella cloth, puddle, concrete, terrace tile, a plastic tarpaulin, a
+// metal wheelbarrow), and three bird ambiences (forest, dawn chorus,
+// evening). The engine and its effects are generic over "whatever clips are
+// in the current bank," so a further bank (body sounds, insects) is just
+// more Texture entries, more Character rows and a new BankRange -- tap
+// still only picks within the current bank, shake (newBank()) is the only
+// thing that crosses a bank boundary.
+enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow,
+                           BirdForest, BirdWake, BirdEvening, textureCount };
+enum Bank : unsigned { BankRain = 0, BankBirds, bankCount };
 enum Punch : unsigned { PunchNone = 0, PunchPitchWobble, PunchDelayThrow, PunchCrush, PunchReverb, PunchSmear, punchCount };
 
 class Engine {
@@ -119,13 +121,17 @@ class Engine {
       {1000, 3200, 0.4f, 0.9f, 11},   // Rain on terrace: big storm drops
       {1200, 3600, 0.45f, 0.9f, 9},   // Rain on tarpaulin: brighter, plasticky
       {1200, 4000, 0.5f, 0.85f, 9},   // Rain on wheelbarrow: metallic, most resonant
+      {1200, 4200, 0.35f, 0.85f, 12}, // Bird forest ambience: steady bed, chirps laced through
+      {1200, 4600, 0.4f, 0.85f, 9},   // Birds waking: dawn chorus, livelier
+      {1100, 3800, 0.35f, 0.85f, 13}, // Evening birds: calmer, built to loop
     }};
     return table;
   }
 
   static const std::array<BankRange, bankCount>& bankRanges() {
     static const std::array<BankRange, bankCount> table{{
-      {Rain, textureCount}, // all six rain clips
+      {Rain, 6},       // all six rain clips
+      {BirdForest, 3}, // all three bird clips
     }};
     return table;
   }
@@ -246,7 +252,7 @@ class Engine {
   unsigned currentBank() const { return bank; }
   unsigned barCount() const { return bar; }
   unsigned currentPunch() const { return punchType; }
-  uint32_t displayInfo() const { return (generation << 10) | (texture << 7) | tempo; }
+  uint32_t displayInfo() const { return (generation << 11) | (texture << 7) | tempo; }
   bool drainBarTick() { bool t = barTick; barTick = false; return t; }
 
   float sample() {

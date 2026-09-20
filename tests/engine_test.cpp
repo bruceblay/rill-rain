@@ -37,7 +37,7 @@ int main() {
     assert(energy > 0.0005);
     std::cout << "seed " << seed << ": five-minute stability, headroom, fade/resume passed; peak=" << peak << " jump=" << jump << '\n';
   }
-  assert(texturesSeen == 0x3fu); // All six rain-on-surface textures appeared.
+  assert(texturesSeen == 0x3fu); // All six rain-bank textures appeared; newVariation() never crosses a bank.
   assert(ticksTotal > 5); // The bar clock is actually advancing, not stuck.
 
   auto a = std::unique_ptr<field::Engine>(new field::Engine(42));
@@ -69,4 +69,30 @@ int main() {
     assert(jump < 1.3f);
   }
   std::cout << "Loop crossfade stays within the jump bound\n";
+
+  // Shake (newBank()) is the only thing that crosses a bank boundary; tap
+  // (newVariation()) must never leave the current bank on its own.
+  {
+    field::Engine engine(3);
+    assert(engine.currentBank() == field::BankRain);
+    for (unsigned i = 0; i < 20; ++i) {
+      engine.newVariation();
+      assert(engine.currentBank() == field::BankRain);
+      assert(engine.currentTexture() < 6); // still within the rain bank
+    }
+    unsigned banksSeen = 1u << engine.currentBank();
+    unsigned textureBits = 0;
+    for (unsigned i = 0; i < 40; ++i) {
+      engine.newBank();
+      banksSeen |= 1u << engine.currentBank();
+      textureBits |= 1u << engine.currentTexture();
+      if (engine.currentBank() == field::BankBirds)
+        assert(engine.currentTexture() >= field::BirdForest && engine.currentTexture() < field::textureCount);
+      else
+        assert(engine.currentTexture() < 6);
+    }
+    assert(banksSeen == 0x3u); // both banks visited
+    std::cout << "Shake crosses banks, tap stays within one; textures touched=0x"
+              << std::hex << textureBits << std::dec << "\n";
+  }
 }
