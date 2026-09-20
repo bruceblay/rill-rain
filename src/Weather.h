@@ -135,16 +135,16 @@ class Scene {
       {70, 50, 25},   // deep sandy brown
     };
     static const Color caveInks[3] = {
-      {200, 195, 185}, // pale limestone
-      {180, 190, 200}, // pale cool grey
-      {210, 200, 175}, // pale sandstone
+      {55, 30, 70},   // deep violet
+      {35, 30, 45},   // dark charcoal-purple
+      {40, 25, 60},   // dark indigo
     };
     static const std::array<BankPalette, bankCount> table{{
       {{16, 20, 30}, rainInks, 3},     // Rain: moody charcoal-blue ground
       {{130, 195, 240}, birdInks, 3},  // Birds: light sky-blue ground, dark ink -- birds against open sky
       {{160, 215, 130}, insectInks, 3},// Insects: light green ground, dark ink
       {{110, 195, 220}, oceanInks, 3}, // Ocean: lighter turquoise water, dark ink, bubbles rising
-      {{28, 26, 24}, caveInks, 3},     // Cave: dark stone ground, pale mineral ink, drips falling
+      {{195, 165, 220}, caveInks, 3},  // Cave: light purple ground, dark ink, drips falling
     }};
     return table;
   }

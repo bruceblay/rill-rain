@@ -31,7 +31,7 @@ Playback state is not saved across restarts.
 
 The visual is one continuous particle field per bank, not a catalog of families like Rill's or Rill Drums' -- this project's focus is the audio, and the screen only needs to read as alive. A bar boundary briefly brightens a particle near the top, a visible tell for the rhythm that's otherwise only in the audio's filter sweep. Rain's and Cave's particles are plain falling dots; Birds' are tiny two-stroke chevrons that flap between wings-up and wings-down as they wander; Insects are tiny specks darting erratically; Ocean's are plain dots drifting slowly upward like bubbles. Tap cycles the ink color within a bank; shake crosses to the other bank's ground, ink set, drift and shape entirely.
 
-Color follows the same drawing language as Rill and Rill Drums -- flat opaque ink, a fainter particle mixed toward the ground colour rather than toward black, regardless of which one is lighter. The ground colour is fixed per bank rather than shuffling -- it's how you tell banks apart at a glance: Rain and Cave both keep dark grounds with pale ink (charcoal-blue for Rain, stone-grey for Cave); Birds, Insects and Ocean all invert that with light grounds and dark ink -- sky-blue for Birds, green for Insects, a lighter turquoise for Ocean.
+Color follows the same drawing language as Rill and Rill Drums -- flat opaque ink, a fainter particle mixed toward the ground colour rather than toward black, regardless of which one is lighter. The ground colour is fixed per bank rather than shuffling -- it's how you tell banks apart at a glance: Rain is the only dark ground (moody charcoal-blue with pale ink, since it suits rain at night); Birds, Insects, Ocean and Cave all invert that with light grounds and dark ink -- sky-blue for Birds, green for Insects, a lighter turquoise for Ocean, a light purple for Cave. Cave's ground started dark like Rain's and was changed after feedback that it needed a more distinctive look.
 
 **Rain** (falling dots, dark charcoal-blue ground)
 
@@ -57,11 +57,11 @@ Color follows the same drawing language as Rill and Rill Drums -- flat opaque in
 | --- | --- | --- |
 | ![Ocean visual, deep teal ink](docs/images/ocean-visual-1.png) | ![Ocean visual, dark navy ink](docs/images/ocean-visual-2.png) | ![Ocean visual, deep sandy-brown ink](docs/images/ocean-visual-3.png) |
 
-**Cave** (falling dots, dark stone ground)
+**Cave** (falling dots, light purple ground)
 
 | | | |
 | --- | --- | --- |
-| ![Cave visual, pale limestone ink](docs/images/cave-visual-1.png) | ![Cave visual, pale cool-grey ink](docs/images/cave-visual-2.png) | ![Cave visual, pale sandstone ink](docs/images/cave-visual-3.png) |
+| ![Cave visual, deep violet ink](docs/images/cave-visual-1.png) | ![Cave visual, dark charcoal-purple ink](docs/images/cave-visual-2.png) | ![Cave visual, dark indigo ink](docs/images/cave-visual-3.png) |
 
 These are host-rendered previews (`tools/visual_preview.cpp`), pixel-identical to what the firmware pushes to the real screen, not photos of the device -- the animation and bar-tick highlight don't show in a still frame.
 
