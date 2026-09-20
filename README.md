@@ -31,9 +31,11 @@ Playback state is not saved across restarts.
 
 The visual is one continuous field of falling particles, not a catalog of families like Rill's or Rill Drums' -- this project's focus is the audio, and the screen only needs to read as rain that's alive. A bar boundary briefly brightens a particle near the top, a visible tell for the rhythm that's otherwise only in the audio's filter sweep. Shake cycles the palette.
 
+Color follows the same drawing language as Rill and Rill Drums -- flat opaque ink, a fainter particle mixed toward the ground colour rather than toward black -- but with a dark ground rather than their daylight one, since it suits rain at night. One palette keeps a genuinely blue ground rather than near-black.
+
 | | | |
 | --- | --- | --- |
-| ![Falling rain visual, grey-blue palette](docs/images/rain-visual-1.png) | ![Falling rain visual, deeper blue palette](docs/images/rain-visual-2.png) | ![Falling rain visual, pale silver palette](docs/images/rain-visual-3.png) |
+| ![Falling rain visual, charcoal-blue ground](docs/images/rain-visual-1.png) | ![Falling rain visual, blue ground](docs/images/rain-visual-2.png) | ![Falling rain visual, near-neutral dark ground](docs/images/rain-visual-3.png) |
 
 These are host-rendered previews (`tools/visual_preview.cpp`), pixel-identical to what the firmware pushes to the real screen, not photos of the device -- the animation and bar-tick highlight don't show in a still frame.
 
