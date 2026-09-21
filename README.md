@@ -21,19 +21,21 @@ An earlier version generated its own noise from scratch (filtered white noise st
 
 - **Five banks so far**: **Rain** (six surfaces -- umbrella, puddle, concrete, terrace, plastic tarpaulin, metal wheelbarrow -- a steady wash through to increasingly percussive and metallic), **Birds** (forest ambience, dawn chorus, evening birds), **Insects** (nocturnal insects, crickets/frogs meadow, a close field cricket, a lone night grasshopper), **Ocean** (two wave textures, one underwater hydrophone recording of a waterfall), and **Cave** (two digitally-composited drip/reverb ambiences). All placeholders pending original field recordings (see [docs/SOURCES.md](docs/SOURCES.md) for sources and licenses -- all CC0). Adding a further bank is data, not a rewrite -- see `src/Field.h`. A cicada clip in Insects and a whole Body bank (heartbeat, breathing) were both tried and dropped: the cicada read as off-putting, and Body just wasn't interesting. Ocean's third clip took several tries -- a humpback whale song read as too weak, a bottlenose dolphin's clicks were unpleasant on a loop, and a Weddell seal trill was tuned but never shipped once its license turned out unverified -- before landing on the underwater recording. A standalone Storm/Cave idea was floated and narrowed down after a raw preview: kept Cave (didn't read as "more water"), skipped a separate Storm bank.
 - **A bar-synced lowpass sweep** stands in for a vintage sound conditioner's Tone/Surf Rate knobs: narrow range, low resonance, slow enough to read as breathing rather than the main event. Its floor is kept above ~700 Hz -- the StickS3's small speaker barely reproduces anything lower (confirmed by Rill Drums' own on-device measurements), so a sweep that dips below that reads as silence, not warmth.
-- **Five punch-in effects** -- Pitch Wobble, Delay Throw, Crush, Reverb, Smear -- one at a time, semi-random, self-clearing after a bar or two, each evolving across its own window rather than sitting at one flat setting. Same direction as Rill Drums' punch-in effects. Magnitude varies per bank: Birds and Insects run the biggest, wobbliest Delay Throws/Smears and the widest Pitch Wobble range, Ocean and Cave a notch below that, all well above Rain's original tuning -- occasionally surreal, by design.
+- **Five punch-in effects** -- Pitch Wobble, Delay Throw, Crush, Reverb, Smear -- one at a time, semi-random, self-clearing after a bar or two, each evolving across its own window rather than sitting at one flat setting. Same direction as Rill Drums' punch-in effects. Magnitude varies per bank: Birds and Insects run the biggest, wobbliest Delay Throws/Smears and the widest Pitch Wobble range, Cave shares their delay/smear intensity, with Ocean and Rain gentler. Delay Throw uses 40–75 ms taps; Smear uses 25–60 ms taps with slight modulation. Delay Throw peaks at 70–85% feedback for an intense short tail; Smear retains gentler 25–35% feedback.
 
 Device-to-device ensemble sync -- so a Rill World unit could lock its sweep and bar clock to another Rill instrument's shared tempo -- follows the same unimplemented [design proposal](https://github.com/bruceblay/rill/blob/main/SYNC-DESIGN.md) as Rill and Rill Drums; nothing here talks to another device yet. The bar clock is already shaped to receive that later without restructuring.
+
+Cave plays its two 3-second recordings at 65% speed by default: about 4.6 seconds per loop and 7.5 semitones lower. Pitch Wobble works relative to that slower baseline.
 
 Playback state is not saved across restarts.
 
 ## On the device
 
-The visual is one continuous particle field per bank, not a catalog of families like Rill's or Rill Drums' -- this project's focus is the audio, and the screen only needs to read as alive. A bar boundary briefly brightens a particle near the top, a visible tell for the rhythm that's otherwise only in the audio's filter sweep. Rain's and Cave's particles are plain falling dots; Birds' are tiny two-stroke chevrons that flap between wings-up and wings-down as they wander; Insects are tiny specks darting erratically; Ocean's are plain dots drifting slowly upward like bubbles. Tap cycles the ink color within a bank; shake crosses to the other bank's ground, ink set, drift and shape entirely.
+The visual is one continuous particle field per bank, not a catalog of families like Rill's or Rill Drums' -- this project's focus is the audio, and the screen only needs to read as alive. A bar boundary briefly brightens a particle near the top, a visible tell for the rhythm that's otherwise only in the audio's filter sweep. Rain forms tiny expanding pond ripples that fade and reappear at new impact points; Cave keeps falling dots. Birds are tiny two-stroke chevrons that flap as they wander; Insects have little bodies and four fluttering wings, independently alternating between brief hovers, sudden darts, and longer curving flights with fresh directions and durations; Ocean has hollow bubbles drifting slowly upward. Tap cycles the ink color within a bank; shake crosses to the other bank's ground, ink set, drift and shape entirely.
 
 Color follows the same drawing language as Rill and Rill Drums -- flat opaque ink, a fainter particle mixed toward the ground colour rather than toward black, regardless of which one is lighter. The ground colour is fixed per bank rather than shuffling -- it's how you tell banks apart at a glance: Rain is the only dark ground (moody charcoal-blue with pale ink, since it suits rain at night); Birds, Insects, Ocean and Cave all invert that with light grounds and dark ink -- sky-blue for Birds, green for Insects, a lighter turquoise for Ocean, a light purple for Cave. Cave's ground started dark like Rain's and was changed after feedback that it needed a more distinctive look.
 
-**Rain** (falling dots, dark charcoal-blue ground)
+**Rain** (expanding pond ripples, dark charcoal-blue ground)
 
 | | | |
 | --- | --- | --- |
@@ -45,13 +47,13 @@ Color follows the same drawing language as Rill and Rill Drums -- flat opaque in
 | --- | --- | --- |
 | ![Birds visual, dark olive ink](docs/images/birds-visual-1.png) | ![Birds visual, dark wine ink](docs/images/birds-visual-2.png) | ![Birds visual, dark navy ink](docs/images/birds-visual-3.png) |
 
-**Insects** (darting specks, light green ground)
+**Insects** (fluttering insects, light green ground)
 
 | | | |
 | --- | --- | --- |
 | ![Insects visual, dark forest-green ink](docs/images/insects-visual-1.png) | ![Insects visual, dark amber-brown ink](docs/images/insects-visual-2.png) | ![Insects visual, dark navy ink](docs/images/insects-visual-3.png) |
 
-**Ocean** (bubbles drifting upward, lighter turquoise ground)
+**Ocean** (hollow bubbles drifting upward, lighter turquoise ground)
 
 | | | |
 | --- | --- | --- |
@@ -135,3 +137,5 @@ Tests cover five simulated minutes of playback per seed, bounded output, a jump/
 In the spirit of [Rill](https://github.com/bruceblay/rill). Developed through iterative on-device listening and viewing, with Claude assisting implementation.
 
 Rill World follows Rill's parent project Pocket Radio's **GPL-3.0-or-later** license. See [LICENSE](LICENSE). The embedded field recordings are separately licensed CC0 1.0; see [docs/SOURCES.md](docs/SOURCES.md).
+
+Shake draws from a shuffled bank pool, visiting every bank before refilling it. Recordings within each bank also cycle through a shuffled pool; neither pool repeats its last choice at a refill. Rain uses 24 slowly expanding ripples, while Ocean and Cave drift at a calmer pace.

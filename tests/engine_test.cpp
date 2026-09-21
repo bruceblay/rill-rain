@@ -40,6 +40,44 @@ int main() {
   assert(texturesSeen == 0x3fu); // All six rain-bank textures appeared; newVariation() never crosses a bank.
   assert(ticksTotal > 5); // The bar clock is actually advancing, not stuck.
 
+  // Every complete bank round and per-bank clip round covers all choices.
+  for (uint32_t seed : {1u, 23u, 999u}) {
+    field::Engine engine(seed);
+    unsigned seen = 1u << engine.currentBank();
+    for (unsigned i = 1; i < field::bankCount; ++i) {
+      engine.newBank();
+      assert(!(seen & (1u << engine.currentBank())));
+      seen |= 1u << engine.currentBank();
+    }
+    for (unsigned round = 0; round < 20; ++round) {
+      seen = 0;
+      for (unsigned i = 0; i < field::bankCount; ++i) {
+        unsigned previous = engine.currentBank();
+        engine.newBank();
+        assert(engine.currentBank() != previous);
+        assert(!(seen & (1u << engine.currentBank())));
+        seen |= 1u << engine.currentBank();
+      }
+    }
+    for (unsigned bank = 0; bank < field::bankCount; ++bank) {
+      while (engine.currentBank() != bank) engine.newBank();
+      engine.seed(seed); // fresh clip bag in the selected bank
+      const unsigned counts[] = {6, 3, 4, 3, 2};
+      unsigned previous = field::textureCount;
+      for (unsigned round = 0; round < 10; ++round) {
+        seen = 0;
+        for (unsigned i = 0; i < counts[bank]; ++i) {
+          if (round || i) engine.newVariation();
+          unsigned clip = engine.currentTexture();
+          assert(clip != previous && !(seen & (1u << clip)));
+          assert(engine.currentBank() == bank);
+          seen |= 1u << clip; previous = clip;
+        }
+      }
+    }
+  }
+  std::cout << "Shuffled banks and recordings cover every choice without adjacent repeats\n";
+
   auto a = std::unique_ptr<field::Engine>(new field::Engine(42));
   auto b = std::unique_ptr<field::Engine>(new field::Engine(42));
   int16_t block[512];

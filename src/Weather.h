@@ -44,9 +44,10 @@ class Scene {
  private:
   struct Color { float r, g, b; };
   struct BankPalette { Color background; const Color* inks; unsigned inkCount; };
-  struct Particle { float x, y, speed, size, phase; };
-  enum DriftKind : unsigned { Fall = 0, Drift, Dart, Rise };
-  enum ShapeKind : unsigned { Round = 0, Chevron };
+  struct Particle { float x, y, speed, size, phase, age;
+    float vx = 0, vy = 0, heading = 0, turn = 0, flightTime = 0, flightSpeed = 0; };
+  enum DriftKind : unsigned { Fall = 0, Drift, Dart, Rise, Pond };
+  enum ShapeKind : unsigned { Round = 0, Chevron, Insect, Bubble, Ripple };
   std::array<uint16_t, width * height> frame{};
   uint32_t rng;
   unsigned bank = 0, inkIndex = 0, count = 0;
@@ -100,17 +101,41 @@ class Scene {
     strokeLine(cx - r, cy + wing * 0.5f, cx, cy - wing, c);
     strokeLine(cx, cy - wing, cx + r, cy + wing * 0.5f, c);
   }
+  // One-pixel outlines leave the water visible inside bubbles and ripples.
+  void ring(float cx, float cy, float r, float shade) {
+    uint16_t c = mix(shade);
+    float inner = std::max(0.0f, r - 1.0f);
+    for (int y = int(cy - r); y <= int(cy + r); ++y)
+      for (int x = int(cx - r); x <= int(cx + r); ++x) {
+        float dx = x - cx, dy = y - cy;
+        float d = dx * dx + dy * dy;
+        if (d <= r * r && d >= inner * inner) plot(x, y, c);
+      }
+  }
+  // A little vertical body and four flickering wings, distinct from the
+  // birds' wide chevrons even on the small screen.
+  void insect(float cx, float cy, float r, float flap, float shade) {
+    uint16_t c = mix(shade);
+    float spread = r * (0.75f + 0.25f * std::sin(flap));
+    strokeLine(cx, cy - r, cx, cy + r, c);
+    for (int side : {-1, 1}) {
+      strokeLine(cx, cy, cx + side * spread, cy - r * 0.65f, c);
+      strokeLine(cx, cy, cx + side * spread, cy + r * 0.65f, c);
+    }
+  }
   void resetParticles() {
-    // Birds get a bit more wingspan than rain gets dot size, so the
-    // two-stroke chevron actually reads at this resolution. Insects go the
-    // other way -- tiny darting specks.
     float sizeMul = shapeForBank(bank) == Chevron ? 1.6f
-                  : driftForBank(bank) == Dart ? 0.6f : 1.0f;
+                  : shapeForBank(bank) == Bubble ? 1.5f : 1.0f;
     for (auto& p : particles) {
       p.x = unit() * width; p.y = unit() * height;
       p.speed = 0.4f + unit() * 0.8f;
       p.size = (0.8f + unit() * 1.6f) * sizeMul;
       p.phase = unit() * 6.283185f;
+      p.age = p.phase / 6.283185f;
+      p.vx = p.vy = 0;
+      p.heading = p.phase; p.turn = 0;
+      p.flightTime = p.age * 0.8f; p.flightSpeed = 8;
+
     }
   }
   static const std::array<BankPalette, bankCount>& bankPalettes() {
@@ -150,14 +175,22 @@ class Scene {
   }
   static DriftKind driftForBank(unsigned b) {
     switch (b) {
-      case 0: return Fall;
+      case 0: return Pond;
       case 2: return Dart;
       case 3: return Rise;
       case 4: return Fall;
       default: return Drift;
     }
   }
-  static ShapeKind shapeForBank(unsigned b) { return b == 1 ? Chevron : Round; }
+  static ShapeKind shapeForBank(unsigned b) {
+    switch (b) {
+      case 0: return Ripple;
+      case 1: return Chevron;
+      case 2: return Insect;
+      case 3: return Bubble;
+      default: return Round;
+    }
+  }
 
  public:
   explicit Scene(uint32_t value = 23) { seed(value); }
@@ -190,35 +223,77 @@ class Scene {
     frame.fill(backgroundPacked);
     DriftKind drift = driftForBank(bank);
     ShapeKind shape = shapeForBank(bank);
-    for (auto& p : particles) {
+    unsigned activeCount = bank == 0 ? 24 : particleCount;
+    for (unsigned i = 0; i < activeCount; ++i) {
+      auto& p = particles[i];
       switch (drift) {
+        case Pond: // fixed impact point; expand, fade, then land elsewhere
+          p.age += dt * (0.20f + p.speed * 0.10f);
+          if (p.age >= 1) {
+            p.age -= 1;
+            p.x = unit() * width; p.y = unit() * height;
+          }
+          break;
         case Drift: // birds: gentle wander, no fixed direction
           p.x += std::sin(phase * 0.5f + p.phase) * p.speed * dt * 10;
           p.y += std::cos(phase * 0.3f + p.phase) * p.speed * dt * 6;
           if (p.x < -2) p.x = width + 2; else if (p.x > width + 2) p.x = -2;
           if (p.y < -2) p.y = height + 2; else if (p.y > height + 2) p.y = -2;
           break;
-        case Dart: // insects: quick jittery darting, no fixed direction
-          p.x += std::sin(phase * 9.0f + p.phase * 7.0f) * p.speed * dt * 40;
-          p.y += std::cos(phase * 11.0f + p.phase * 5.0f) * p.speed * dt * 40;
-          if (p.x < -2) p.x = width + 2; else if (p.x > width + 2) p.x = -2;
-          if (p.y < -2) p.y = height + 2; else if (p.y > height + 2) p.y = -2;
+        case Dart: {
+          // Each insect makes independent, irregular flight decisions.
+          // Integrate velocity instead of oscillating around a fixed point.
+          p.flightTime -= dt;
+          if (p.flightTime <= 0 && dt > 0) {
+            float choice = unit();
+            p.heading += (unit() - 0.5f) * 4.5f;
+            p.heading = std::fmod(p.heading, 6.283185f);
+            p.turn = (unit() - 0.5f) * 2.4f;
+            if (choice < 0.25f) { // briefly hover, then leave
+              p.flightSpeed = 1 + unit() * 4;
+              p.flightTime = 0.25f + unit() * 1.1f;
+            } else if (choice < 0.55f) { // sudden short dart
+              p.flightSpeed = 25 + unit() * 20;
+              p.flightTime = 0.18f + unit() * 0.45f;
+            } else { // longer exploratory flight with a gradual turn
+              p.flightSpeed = 8 + unit() * 16;
+              p.flightTime = 0.8f + unit() * 2.4f;
+              p.turn *= 0.4f;
+            }
+          }
+          p.heading += p.turn * dt;
+          float ease = std::min(1.0f, dt * 8);
+          p.vx += (std::cos(p.heading) * p.flightSpeed * p.speed - p.vx) * ease;
+          p.vy += (std::sin(p.heading) * p.flightSpeed * p.speed - p.vy) * ease;
+          p.x += p.vx * dt; p.y += p.vy * dt;
+          if (p.x < -4) p.x += width + 8; else if (p.x > width + 4) p.x -= width + 8;
+          if (p.y < -4) p.y += height + 8; else if (p.y > height + 4) p.y -= height + 8;
           break;
+        }
         case Rise: // ocean: bubbles drifting upward with a slight wobble
-          p.y -= p.speed * dt * 20;
+          p.y -= p.speed * dt * 10;
           p.x += std::sin(phase * 0.4f + p.phase) * dt * 4;
           if (p.y < -2) { p.y = height + 2; p.x = unit() * width; }
           break;
         default: // Fall
-          p.y += p.speed * dt * 60;
+          p.y += p.speed * dt * 18;
           if (p.y > height + 2) { p.y = -2; p.x = unit() * width; }
       }
       float shimmer = 0.5f + 0.5f * std::sin(phase * 1.3f + p.phase);
       float shade = 0.4f + shimmer * 0.6f;
       if (shape == Chevron) bird(p.x, p.y, p.size, phase * 8.0f + p.phase * 3.0f, shade);
-      else dot(p.x, p.y, p.size, shade);
+      else if (shape == Insect) insect(p.x, p.y, std::max(1.6f, p.size), phase * 24 + p.phase, shade);
+      else if (shape == Bubble) ring(p.x, p.y, std::max(2.0f, p.size), shade);
+      else if (shape == Ripple) {
+        if (p.age < 0.90f) ring(p.x, p.y, 1.0f + p.age * (2.5f + p.size), (1 - p.age) * 0.85f);
+      } else dot(p.x, p.y, p.size, shade);
     }
-    if (beat) dot(unit() * width, height * 0.12f, 3, 0.75f + breath * 0.25f);
+    if (beat) {
+      float x = unit() * width, y = height * 0.12f;
+      if (shape == Bubble || shape == Ripple) ring(x, y, 3, 0.75f + breath * 0.25f);
+      else if (shape == Insect) insect(x, y, 2, phase * 24, 1);
+      else dot(x, y, 3, 0.75f + breath * 0.25f);
+    }
   }
 };
 }

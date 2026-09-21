@@ -11,8 +11,11 @@ int main(int argc, char** argv) {
   auto engine = std::unique_ptr<field::Engine>(new field::Engine(seed));
   auto scene = std::unique_ptr<weather::Scene>(new weather::Scene(seed));
   if (argc > 3 && std::strtoul(argv[3], nullptr, 10) % 2 == 1) scene->regenerate();
+  // Optional bank and frame count allow previews of every bank's animation.
+  if (argc > 4) { scene->setBank(std::strtoul(argv[4], nullptr, 10)); scene->regenerate(); }
+  unsigned frames = argc > 5 ? std::strtoul(argv[5], nullptr, 10) : 360;
   // Advance real audio so the visual has bar ticks to react to.
-  for (unsigned i = 0; i < field::rate * 6; ++i) {
+  for (unsigned i = 0; i < uint64_t(frames) * (field::rate / 60); ++i) {
     engine->sample();
     if ((i % (field::rate / 60)) == 0) scene->render(1.0f / 60, engine->drainBarTick());
   }

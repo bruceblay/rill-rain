@@ -32,5 +32,18 @@ int main() {
   a->render(0, true); b->render(0, false);
   assert(hash(*a) != hash(*b));
 
-  std::cout << "Determinism, animation and hit response passed\n";
+  // Exercise every bank, including ripple respawns and clipped edge shapes.
+  for (unsigned bank = 0; bank < weather::Scene::bankCount; ++bank) {
+    a->setBank(bank); b->setBank(bank);
+    a->seed(23); b->seed(23);
+    a->render(0, false); b->render(0, false);
+    auto start = hash(*a);
+    for (unsigned frame = 0; frame < 600; ++frame) {
+      a->render(1.0f / 30, frame % 97 == 0);
+      b->render(1.0f / 30, frame % 97 == 0);
+      assert(hash(*a) == hash(*b));
+    }
+    assert(hash(*a) != start);
+  }
+  std::cout << "All banks: determinism, animation and hit response passed\n";
 }

@@ -80,6 +80,9 @@ class Engine {
 
   uint32_t rng, punchRng = 1;
   unsigned bank = 0, texture = 0, generation = 0;
+  unsigned banksRemaining = 0;
+  std::array<unsigned, bankCount> texturesRemaining{};
+  std::array<unsigned, bankCount> lastTextures{};
   unsigned tempo = 56;
   uint32_t stepSamples = rate * 60 / (56 * 4);
   uint32_t barSamples = stepSamples * steps, barPhase = 0;
@@ -102,7 +105,7 @@ class Engine {
   uint64_t punchStartAt = 0, punchEndAt = 0;
   float punchPitchTarget = 1;
   std::array<int16_t, rate> delay{}; // 1 s, shared by Delay Throw and Smear
-  unsigned delayWrite = 0, delayTapSamples = rate / 6;
+  unsigned delayWrite = 0, delayTapSamples = rate * 40 / 1000;
   float delayFeedback = 0, delayMix = 0, delayDamp = 0;
   float smearWobblePhase = 0, smearWobbleStep = 0;
   unsigned crushMaxHold = 1, crushHoldCounter = 0;
@@ -128,6 +131,9 @@ class Engine {
     return 2.0f * std::sin(pi * clamped / rate);
   }
 
+  // Stretch the short cave recordings and lower their drips by default.
+  // Punch pitch ratios remain relative to this bank's resting speed.
+  float basePlaybackRate() const { return bank == BankCave ? 0.65f : 1.0f; }
   const Character& active_() const { return characters()[texture]; }
   static const std::array<Character, textureCount>& characters() {
     // Narrower ranges and slower swells than the first pass, which was
@@ -171,38 +177,47 @@ class Engine {
     return table;
   }
 
-  // Punch magnitudes vary by bank, not just by punch type: Birds, Insects
-  // and Cave run the biggest, wobbliest smears and Delay Throws (more
-  // feedback, more mix) and a wider pitch-wobble range than Rain and
-  // Ocean, so they occasionally tip into something a little surreal rather
-  // than staying a tasteful accent throughout. Mix (the wet/dry balance,
-  // separate from feedback's repeat count) was raised a second time across
-  // every bank after direct feedback that the delay effects were still not
-  // audible/intense enough; Cave was bumped up to Birds/Insects' tier
-  // specifically after direct feedback that it "would sound great with the
-  // delay stuff on it."
+  // Short taps keep recognizable snippets from recurring as miniature
+  // sample loops. Delay Throw retains strong feedback; Smear is gentler.
+  // Birds, Insects and Cave retain stronger, wobblier coloration.
   struct PunchStyle {
     float delayThrowFeedback, delayThrowMix;
     float smearFeedback, smearMix, smearWobbleAmp;
-    unsigned smearTapBase, smearTapRange;
+    unsigned smearTapMinMs, smearTapRangeMs;
     float pitchLow, pitchRange;
   };
   static const std::array<PunchStyle, bankCount>& punchStyles() {
     static const std::array<PunchStyle, bankCount> table{{
-      {0.50f, 0.62f, 0.62f, 0.75f, 55.0f, 3, 5, 0.82f, 0.32f},   // Rain: mix raised again
-      {0.65f, 0.80f, 0.90f, 0.96f, 140.0f, 4, 10, 0.65f, 0.55f}, // Birds: mix raised again
-      {0.65f, 0.80f, 0.90f, 0.96f, 140.0f, 4, 10, 0.65f, 0.55f}, // Insects: kept identical to Birds
-      {0.55f, 0.68f, 0.78f, 0.85f, 95.0f, 4, 8, 0.72f, 0.45f},   // Ocean: mix raised again
-      {0.65f, 0.80f, 0.90f, 0.96f, 140.0f, 4, 10, 0.72f, 0.45f}, // Cave: promoted to Birds/Insects' tier
+      {0.70f, 0.62f, 0.25f, 0.75f, 55.0f, 25, 21, 0.82f, 0.32f},   // Rain: 25-45 ms smear
+      {0.85f, 0.80f, 0.35f, 0.96f, 140.0f, 30, 31, 0.65f, 0.55f}, // Birds: 30-60 ms smear
+      {0.85f, 0.80f, 0.35f, 0.96f, 140.0f, 30, 31, 0.65f, 0.55f}, // Insects
+      {0.80f, 0.68f, 0.30f, 0.85f, 95.0f, 30, 26, 0.72f, 0.45f},  // Ocean: 30-55 ms smear
+      {0.85f, 0.80f, 0.35f, 0.96f, 140.0f, 30, 31, 0.72f, 0.45f}, // Cave
     }};
     return table;
   }
 
-  unsigned pickTextureInBank(unsigned b, bool avoidCurrent) {
+  // Draw without replacement; refill only after every choice was visited.
+  // At a refill, avoid repeating the last choice across the bag boundary.
+  unsigned pickFromBag(unsigned& remaining, unsigned count, unsigned previous) {
+    if (!remaining) remaining = (1u << count) - 1;
+    unsigned eligible = remaining;
+    if (count > 1 && previous < count) eligible &= ~(1u << previous);
+    unsigned choices = 0;
+    for (unsigned i = 0; i < count; ++i) if (eligible & (1u << i)) ++choices;
+    unsigned pick = random() % choices;
+    for (unsigned i = 0; i < count; ++i) {
+      if (!(eligible & (1u << i))) continue;
+      if (pick-- == 0) { remaining &= ~(1u << i); return i; }
+    }
+    return 0;
+  }
+
+  unsigned pickTextureInBank(unsigned b) {
     const BankRange& r = bankRanges()[b];
-    if (!avoidCurrent || r.count <= 1) return r.first + random() % r.count;
-    unsigned localCurrent = texture - r.first;
-    return r.first + (localCurrent + 1 + random() % (r.count - 1)) % r.count;
+    unsigned next = pickFromBag(texturesRemaining[b], r.count, lastTextures[b]);
+    lastTextures[b] = next;
+    return r.first + next;
   }
 
   void applyCharacter() {
@@ -214,7 +229,7 @@ class Engine {
     swellStep = 2 * pi / (active_().swellBars * barSamples);
     swellPhase = unit() * 2 * pi;
     svfLow = svfBand = 0;
-    readPos = 0; playRate = 1;
+    readPos = 0; playRate = basePlaybackRate();
     punchType = PunchNone; punchPitchTarget = 1;
     delayFeedback = delayMix = delayDamp = 0;
     crushHoldCounter = 0;
@@ -243,14 +258,15 @@ class Engine {
         punchPitchTarget = ps.pitchLow + punchUnit() * ps.pitchRange;
         break;
       case PunchDelayThrow:
-        delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (2 + punchRandom() % 5));
+        // Milliseconds, independent of tempo: a short 40-75 ms accent.
+        delayTapSamples = rate * (40 + punchRandom() % 36) / 1000;
         break;
       case PunchCrush:
         crushMaxHold = 3 + punchRandom() % 5; // light: 3-7 samples held at the deepest point
         crushHoldCounter = 0;
         break;
       case PunchSmear:
-        delayTapSamples = std::min<unsigned>(delay.size() - 1, stepSamples * (ps.smearTapBase + punchRandom() % ps.smearTapRange));
+        delayTapSamples = rate * (ps.smearTapMinMs + punchRandom() % ps.smearTapRangeMs) / 1000;
         smearWobbleStep = 2 * pi * (0.1f + punchUnit() * 0.15f) / rate; // slow, ~0.1-0.25 Hz
         break;
       default: break;
@@ -292,21 +308,21 @@ class Engine {
     rng = value ? value : 1;
     for (unsigned i = 0; i < 6; ++i) random(); // avoid small-seed correlation on the first texture pick
     generation = 0;
+    banksRemaining = ((1u << bankCount) - 1) & ~(1u << bank);
+    texturesRemaining.fill(0); lastTextures.fill(textureCount);
     generate();
   }
   void generate() {
-    texture = pickTextureInBank(bank, generation != 0);
+    texture = pickTextureInBank(bank);
     ++generation;
     if (generation == 1) applyCharacter(); else beginXfade();
   }
   void newVariation() { generate(); }
-  // Shake: cross into a different bank (a no-op today, with only one bank
-  // to switch to -- becomes live the moment a second bank's data exists,
-  // no further engine changes needed).
+  // Shake visits every bank before starting another shuffled round.
   void newBank() {
     if (bankCount <= 1) return;
-    bank = (bank + 1 + random() % (bankCount - 1)) % bankCount;
-    texture = pickTextureInBank(bank, false);
+    bank = pickFromBag(banksRemaining, bankCount, bank);
+    texture = pickTextureInBank(bank);
     ++generation;
     beginXfade();
   }
@@ -332,7 +348,8 @@ class Engine {
     stepClock(); ++clock;
     const Character& c = active_();
 
-    playRate += ((punchType == PunchPitchWobble ? punchPitchTarget : 1.0f) - playRate) / (rate * 0.15f);
+    float targetRate = basePlaybackRate() * (punchType == PunchPitchWobble ? punchPitchTarget : 1.0f);
+    playRate += (targetRate - playRate) / (rate * 0.15f);
     swellPhase += swellStep; if (swellPhase > 2 * pi) swellPhase -= 2 * pi;
     float swell = 0.5f + 0.5f * std::sin(swellPhase);
     float cutoff = c.cutoffLowHz + (c.cutoffHighHz - c.cutoffLowHz) * swell;
