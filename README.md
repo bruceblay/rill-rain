@@ -1,6 +1,6 @@
 # Rill World
 
-A generative environment box, a companion to [Rill](https://github.com/bruceblay/rill), for the **M5Stack StickS3**. Rill World plays real field recordings, grouped into banks (Rain, Birds, more to come), through a slow bar-synced filter sweep and a handful of self-clearing effects, so it breathes rather than sitting as a flat loop. Tap for a new recording within the current bank. Shake for a different bank entirely.
+A generative environment box, a companion to [Rill](https://github.com/bruceblay/rill-synth), for the **M5Stack StickS3**. Rill World plays real field recordings, grouped into banks (Rain, Birds, more to come), through a slow bar-synced filter sweep and a handful of self-clearing effects, so it breathes rather than sitting as a flat loop. Tap for a new recording within the current bank. Shake for a different bank entirely.
 
 It is a sibling instrument, not a Rill feature: same hardware, same GPL-3.0-or-later license and Rill's parent project Pocket Radio, and built with the same host-testable, allocation-free approach, but its own repository, its own engine, and its own aesthetic. It needs no Wi-Fi, account, or cloud service.
 
@@ -23,7 +23,7 @@ An earlier version generated its own noise from scratch (filtered white noise st
 - **A bar-synced lowpass sweep** stands in for a vintage sound conditioner's Tone/Surf Rate knobs: narrow range, low resonance, slow enough to read as breathing rather than the main event. Its floor is kept above ~700 Hz -- the StickS3's small speaker barely reproduces anything lower (confirmed by Rill Drums' own on-device measurements), so a sweep that dips below that reads as silence, not warmth.
 - **Five punch-in effects** -- Pitch Wobble, Delay Throw, Crush, Reverb, Smear -- one at a time, semi-random, self-clearing after a bar or two, each evolving across its own window rather than sitting at one flat setting. Same direction as Rill Drums' punch-in effects. Magnitude varies per bank: Birds and Insects run the biggest, wobbliest Delay Throws/Smears and the widest Pitch Wobble range, Cave shares their delay/smear intensity, with Ocean and Rain gentler. Delay Throw uses 40–75 ms taps; Smear uses 25–60 ms taps with slight modulation. Delay Throw peaks at 70–85% feedback for an intense short tail; Smear retains gentler 25–35% feedback.
 
-Device-to-device ensemble sync -- so a Rill World unit could lock its sweep and bar clock to another Rill instrument's shared tempo -- follows the same unimplemented [design proposal](https://github.com/bruceblay/rill/blob/main/SYNC-DESIGN.md) as Rill and Rill Drums; nothing here talks to another device yet. The bar clock is already shaped to receive that later without restructuring.
+Device-to-device ensemble sync -- so a Rill World unit could lock its sweep and bar clock to another Rill instrument's shared tempo -- follows the same unimplemented [design proposal](https://github.com/bruceblay/rill-synth/blob/main/SYNC-DESIGN.md) as Rill and Rill Drums; nothing here talks to another device yet. The bar clock is already shaped to receive that later without restructuring.
 
 Cave plays its two 3-second recordings at 65% speed by default: about 4.6 seconds per loop and 7.5 semitones lower. Pitch Wobble works relative to that slower baseline.
 
@@ -134,7 +134,7 @@ Tests cover five simulated minutes of playback per seed, bounded output, a jump/
 
 ## Credits and license
 
-In the spirit of [Rill](https://github.com/bruceblay/rill). Developed through iterative on-device listening and viewing, with Claude assisting implementation.
+In the spirit of [Rill](https://github.com/bruceblay/rill-synth). Developed through iterative on-device listening and viewing, with Claude assisting implementation.
 
 Rill World follows Rill's parent project Pocket Radio's **GPL-3.0-or-later** license. See [LICENSE](LICENSE). The embedded field recordings are separately licensed CC0 1.0; see [docs/SOURCES.md](docs/SOURCES.md).
 
