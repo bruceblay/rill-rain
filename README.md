@@ -1,3 +1,5 @@
+<img src="docs/images/birds-visual-1.png" alt="Rill World: birds against a blue sky" width="800">
+
 # Rill World
 
 A generative environment box, a companion to [Rill](https://github.com/bruceblay/rill-synth), for the **M5Stack StickS3**. Rill World plays real field recordings, grouped into banks (Rain, Birds, more to come), through a slow bar-synced filter sweep and a handful of self-clearing effects, so it breathes rather than sitting as a flat loop. Tap for a new recording within the current bank. Shake for a different bank entirely.
