@@ -2,6 +2,8 @@
 
 # Rill World
 
+**rill** /rɪl/ *noun* — a small stream or a tiny, shallow channel cut into soil by running water.
+
 A generative environment instrument for the **M5Stack StickS3**. Field recordings of rain, birds, insects, ocean and cave ambiences move through slow filters and effects, accompanied by particle visuals. Tap for a new sample. Shake for a new environment.
 
 [Play Rill World](https://rillsound.com/world) · [Build and install](#build-and-install)
