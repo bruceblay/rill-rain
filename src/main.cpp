@@ -4,6 +4,15 @@
 #include <atomic>
 #include <esp_system.h>
 #include "Field.h"
+// The radio is off unless asked for. ESP-NOW pulls in the WiFi stack, which
+// is about 390 KB this project does not have: its eighteen loops already fill
+// the chip. Joining an ensemble costs roughly six seconds of sample content,
+// spread across the loops or taken as one texture, and that is a trade to
+// make deliberately rather than in a build flag nobody chose. Everything else
+// is in place -- build with -DENSEMBLE_SYNC=1 once the samples have room.
+#if ENSEMBLE_SYNC
+#include "Radio.h"
+#endif
 #include "Weather.h"
 #include "ShakeDetector.h"
 
@@ -18,6 +27,11 @@ static std::atomic<bool> playing{true}, changeRequested{false}, repaintRequested
 static std::atomic<uint32_t> sceneInfo{0};
 static std::atomic<bool> tickFlag{false};
 static std::atomic<uint32_t> worstRenderUs{0}, queueErrors{0};
+// The ensemble's tempo, the phase error against its bar, and which bar it is
+// on, handed to the audio task through atomics the same way every other
+// request is: this engine is not safe to touch from two tasks at once.
+static std::atomic<uint32_t> ensembleTempo{0}, ensembleBar{0};
+static std::atomic<int32_t> gridTrim{0};
 static uint8_t volume = 165;
 
 void audioTask(void*) {
@@ -26,6 +40,9 @@ void audioTask(void*) {
     if (changeRequested.exchange(false)) engine.newVariation();
     if (bankChangeRequested.exchange(false)) engine.newBank();
     engine.setPlaying(playing.load());
+    if (uint32_t bpm = ensembleTempo.exchange(0)) engine.followTempo(bpm);
+    if (int32_t trim = gridTrim.exchange(0)) engine.trimGrid(trim);
+    if (uint32_t bar = ensembleBar.exchange(0)) engine.alignSwell(bar - 1);
     uint32_t start = micros();
     engine.render(buffers[index], 512);
     uint32_t elapsed = micros() - start;
@@ -97,14 +114,52 @@ void setup() {
   }
   if (xTaskCreatePinnedToCore(motionTask, "field-motion", 4096, nullptr, 1, nullptr, 0) != pdPASS)
     Serial.println("Motion task unavailable");
+#if ENSEMBLE_SYNC
+  if (!radio::begin(engine.bpm()))
+    Serial.println("ensemble radio unavailable; playing alone");
+#endif
   if (xTaskCreatePinnedToCore(audioTask, "field-audio", 4096, nullptr, 3, nullptr, 1) != pdPASS) {
     audioFailed = true; M5.Display.fillScreen(0x1082);
     M5.Display.setTextSize(2); M5.Display.setCursor(16, 62); M5.Display.print("audio error");
   }
 }
 
+// Keep the wash on the shared bar. Two things travel: the bar clock, which
+// puts the transients on the ensemble's grid, and the bar count, which the
+// swell is aligned against so every device breathes together.
+#if ENSEMBLE_SYNC
+void serviceEnsemble() {
+  if (!radio::up()) return;
+  int64_t now = esp_timer_get_time();
+  radio::service(now, 4);
+  static int64_t lastTrim = 0;
+  if (now - lastTrim < 120000) return;
+  lastTrim = now;
+  ensembleTempo.store(radio::tempo());
+  // Offset by one, so zero can mean nothing new to say.
+  ensembleBar.store(radio::beatIndex() / 4 + 1);
+  int64_t untilBar = 0, barMicros = 0;
+  radio::barWindow(now, 4, untilBar, barMicros);
+  if (barMicros <= 0) return;
+  int64_t span = int64_t(engine.barSpan());
+  if (span <= 0) return;
+  int64_t want = span - (untilBar * int64_t(field::rate)) / 1000000;
+  while (want < 0) want += span;
+  want %= span;
+  int64_t error = want - int64_t(engine.barPhaseSamples());
+  error = ((error % span) + span) % span;
+  if (error > span / 2) error -= span;
+  // A quarter of the error at a time. A wash has no attack to hide a
+  // correction behind, so it is spread thinner here than on the instruments.
+  gridTrim.store(int32_t(error / 4));
+}
+#else
+void serviceEnsemble() {}
+#endif
+
 void loop() {
   M5.update();
+  serviceEnsemble();
   uint32_t now = millis();
   bool changed = false;
   if (M5.BtnA.wasClicked()) { changeRequested = true; playing = true; changed = true; }

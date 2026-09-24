@@ -95,6 +95,11 @@ class Engine {
 
   float svfLow = 0, svfBand = 0;
   float swellPhase = 0, swellStep = 0;
+  // Ensemble: a phase error against the shared bar, paid down a little at a
+  // time. There are no notes here to drop or double, but a jumped bar clock
+  // steps the swell and the transient grid at once, and that is heard as the
+  // wash catching.
+  int32_t gridTrim = 0;
 
   enum Xfade : unsigned { Steady = 0, FadingOut, FadingIn };
   unsigned xfadeState = Steady;
@@ -241,6 +246,17 @@ class Engine {
   void beginXfade() { xfadeState = FadingOut; }
 
   void stepClock() {
+    if (gridTrim && barSamples) {
+      int32_t bite = std::max(int32_t(-32), std::min(int32_t(32), gridTrim));
+      // One counter carries the whole clock here: the step grid is read off
+      // the bar phase rather than kept beside it, so moving this moves both.
+      // Wrapped rather than clamped, since an unsigned counter trimmed below
+      // zero lands just under the bar length and fires a bar line at once.
+      int64_t moved = (int64_t(barPhase) + bite) % int64_t(barSamples);
+      if (moved < 0) moved += barSamples;
+      barPhase = uint32_t(moved);
+      gridTrim -= bite;
+    }
     if (++barPhase >= barSamples) { barPhase = 0; ++bar; barTick = true; maybePunch(); }
   }
 
@@ -330,6 +346,35 @@ class Engine {
 
   unsigned variation() const { return generation; }
   unsigned bpm() const { return tempo; }
+  // Take a conductor's tempo. The swell is measured in bars, so its rate
+  // follows the tempo rather than being reset by it.
+  void followTempo(unsigned bpm) {
+    if (!bpm || bpm == tempo) return;
+    tempo = std::max(40u, std::min(160u, bpm));
+    stepSamples = rate * 60 / (tempo * 4);
+    barSamples = stepSamples * steps;
+    swellStep = 2 * pi / (active_().swellBars * barSamples);
+    if (barPhase >= barSamples) barPhase = 0;
+  }
+  void trimGrid(int32_t samples) { gridTrim = samples; }
+  uint32_t barPhaseSamples() const { return barPhase; }
+  uint32_t barSpan() const { return barSamples; }
+  // The bar clock alone is not what an ensemble hears from a noise wash. Its
+  // swell is: a breath several bars long, and the one gesture in this
+  // instrument big enough to read across a room. Aligned to the shared bar
+  // count, every device brightens and darkens together, which is the whole
+  // point of putting a texture in an ensemble rather than beside one.
+  void alignSwell(uint32_t sharedBar) {
+    float bars = active_().swellBars;
+    if (bars <= 0 || barSamples == 0) return;
+    float place = std::fmod(float(sharedBar) + float(barPhase) / float(barSamples), bars) / bars;
+    float error = place * 2 * pi - swellPhase;
+    while (error > pi) error -= 2 * pi;
+    while (error < -pi) error += 2 * pi;
+    // Slowly: this is a gesture measured in bars, and hurrying it is exactly
+    // the audible swoop it is meant to avoid.
+    swellPhase += error * 0.015f;
+  }
   unsigned currentTexture() const { return texture; }
   unsigned currentBank() const { return bank; }
   unsigned barCount() const { return bar; }
