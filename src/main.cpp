@@ -4,12 +4,12 @@
 #include <atomic>
 #include <esp_system.h>
 #include "Field.h"
-// The radio is off unless asked for. ESP-NOW pulls in the WiFi stack, which
-// is about 390 KB this project does not have: its eighteen loops already fill
-// the chip. Joining an ensemble costs roughly six seconds of sample content,
-// spread across the loops or taken as one texture, and that is a trade to
-// make deliberately rather than in a build flag nobody chose. Everything else
-// is in place -- build with -DENSEMBLE_SYNC=1 once the samples have room.
+// The ensemble radio. ESP-NOW pulls in the WiFi stack, about 390 KB, and the
+// loops already filled the chip: the rain-on-wheelbarrow loop (500 KB) was
+// dropped to make room. Build with -DENSEMBLE_SYNC=0 to play alone without it.
+#ifndef ENSEMBLE_SYNC
+#define ENSEMBLE_SYNC 1
+#endif
 #if ENSEMBLE_SYNC
 #include "Radio.h"
 #endif
@@ -77,7 +77,7 @@ void draw() {
   d.drawFastHLine(16, 48, 208, 0x4208);
   d.setTextSize(2);
   uint32_t info = sceneInfo.load();
-  static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp", "Wheelbrw",
+  static const char* textures[] = {"Umbrella", "Puddle", "Concrete", "Terrace", "Tarp",
                                     "Forest", "Dawn", "Dusk",
                                     "Night", "Meadow", "Cricket", "Hopper",
                                     "Waves", "Swirls", "Underwtr",

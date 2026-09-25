@@ -37,7 +37,7 @@ int main() {
     assert(energy > 0.0005);
     std::cout << "seed " << seed << ": five-minute stability, headroom, fade/resume passed; peak=" << peak << " jump=" << jump << '\n';
   }
-  assert(texturesSeen == 0x3fu); // All six rain-bank textures appeared; newVariation() never crosses a bank.
+  assert(texturesSeen == 0x1fu); // All five rain-bank textures appeared; newVariation() never crosses a bank.
   assert(ticksTotal > 5); // The bar clock is actually advancing, not stuck.
 
   // Every complete bank round and per-bank clip round covers all choices.
@@ -62,7 +62,7 @@ int main() {
     for (unsigned bank = 0; bank < field::bankCount; ++bank) {
       while (engine.currentBank() != bank) engine.newBank();
       engine.seed(seed); // fresh clip bag in the selected bank
-      const unsigned counts[] = {6, 3, 4, 3, 2};
+      const unsigned counts[] = {5, 3, 4, 3, 2};
       unsigned previous = field::textureCount;
       for (unsigned round = 0; round < 10; ++round) {
         seen = 0;

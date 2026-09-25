@@ -34,9 +34,10 @@ namespace field {
 constexpr uint32_t rate = 32000;
 constexpr float pi = 3.14159265358979323846f;
 constexpr unsigned steps = 16;
-// Four banks: six recordings of rain hitting different surfaces (umbrella
-// cloth, puddle, concrete, terrace tile, a plastic tarpaulin, a metal
-// wheelbarrow), three bird ambiences (forest, dawn chorus, evening), four
+// Four banks: five recordings of rain hitting different surfaces (umbrella
+// cloth, puddle, concrete, terrace tile, a plastic tarpaulin -- a sixth, a
+// metal wheelbarrow, was dropped to make room for the ensemble radio),
+// three bird ambiences (forest, dawn chorus, evening), four
 // insect recordings (nocturnal insects+wind, crickets/frogs meadow, a
 // close field cricket, a lone night grasshopper -- a cicada song was tried
 // and dropped as off-putting), and three ocean recordings (two wave
@@ -62,7 +63,7 @@ constexpr unsigned steps = 16;
 // each bank is just more Texture entries, more Character rows and a
 // BankRange -- tap still only picks within the current bank, shake
 // (newBank()) is the only thing that crosses a bank boundary.
-enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin, RainWheelbarrow,
+enum Texture : unsigned { Rain = 0, RainPuddle, RainConcrete, RainTerrace, RainTarpaulin,
                            BirdForest, BirdWake, BirdEvening,
                            InsectNight, InsectCrickets, InsectFieldCricket, InsectGrasshopper,
                            OceanWaves1, OceanWaves2, OceanUnderwater,
@@ -154,7 +155,6 @@ class Engine {
       {1000, 3200, 0.4f, 0.95f, 10},  // Rain on concrete: percussive drops
       {1000, 3200, 0.4f, 0.9f, 11},   // Rain on terrace: big storm drops
       {1200, 3600, 0.45f, 0.9f, 9},   // Rain on tarpaulin: brighter, plasticky
-      {1200, 4000, 0.5f, 0.85f, 9},   // Rain on wheelbarrow: metallic, most resonant
       {1200, 4200, 0.35f, 0.85f, 12}, // Bird forest ambience: steady bed, chirps laced through
       {1200, 3800, 0.35f, 0.7f, 12},  // Birds waking: dawn chorus -- toned down, ran busy at full brightness/gain
       {1100, 3800, 0.35f, 0.85f, 13}, // Evening birds: calmer, built to loop
@@ -173,7 +173,7 @@ class Engine {
 
   static const std::array<BankRange, bankCount>& bankRanges() {
     static const std::array<BankRange, bankCount> table{{
-      {Rain, 6},        // all six rain clips
+      {Rain, 5},        // all five rain clips
       {BirdForest, 3},  // all three bird clips
       {InsectNight, 4}, // all four insect clips
       {OceanWaves1, 3}, // all three ocean clips

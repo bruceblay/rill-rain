@@ -11,7 +11,6 @@
 | RainConcrete | Rain on Concrete | Joseph Sardin | [bigsoundbank.com/rain-on-concrete-s1289.html](https://bigsoundbank.com/rain-on-concrete-s1289.html) | CC0 1.0 |
 | RainTerrace | Summer Rain on Terrace | Joseph Sardin | [bigsoundbank.com/summer-rain-on-terrace-s1019.html](https://bigsoundbank.com/summer-rain-on-terrace-s1019.html) | CC0 1.0 |
 | RainTarpaulin | Rain on Plastic Tarpaulin | Joseph Sardin | [bigsoundbank.com/rain-on-plastic-tarpaulin-s1292.html](https://bigsoundbank.com/rain-on-plastic-tarpaulin-s1292.html) | CC0 1.0 |
-| RainWheelbarrow | Rain on Wheelbarrow | Joseph Sardin | [bigsoundbank.com/rain-on-wheelbarrow-s1291.html](https://bigsoundbank.com/rain-on-wheelbarrow-s1291.html) | CC0 1.0 |
 | BirdForest | Forest | Joseph Sardin | [bigsoundbank.com/forest-s0100.html](https://bigsoundbank.com/forest-s0100.html) | CC0 1.0 |
 | BirdWake | Birds Waking #3 | Joseph Sardin | [bigsoundbank.com/wake-birds-3-s0999.html](https://bigsoundbank.com/wake-birds-3-s0999.html) | CC0 1.0 |
 | BirdEvening | Evening Birds | Joseph Sardin | [bigsoundbank.com/evening-birds-s1859.html](https://bigsoundbank.com/evening-birds-s1859.html) | CC0 1.0 |
@@ -37,7 +36,7 @@ Cave #1 and #2 are the only clips here that aren't raw field recordings: BigSoun
 
 Each source was downloaded at its native rate (48 kHz, 16 or 24-bit, mono or stereo), then, with `ffmpeg`:
 
-1. Trimmed to an excerpt from a point that avoided obvious handling noise or scene changes at the recording's start/end (exact offsets: rain +3s, puddle +5s, concrete +5s, terrace +30s, tarpaulin +10s, wheelbarrow +20s, forest +5s, birds waking +30s, evening birds +30s, nocturnal insects +30s, crickets/frogs +60s, field cricket +5s, grasshopper +0s, sea waves +20s, sea swirls +5s, underwater +10s, cave #1 +10s, cave #2 +10s). Rain and Birds clips are 8 seconds; Insects and Ocean are 6 seconds; the two Cave clips are 3 seconds -- shorter than everything else, to fit the flash budget once a fifth bank was added.
+1. Trimmed to an excerpt from a point that avoided obvious handling noise or scene changes at the recording's start/end (exact offsets: rain +3s, puddle +5s, concrete +5s, terrace +30s, tarpaulin +10s, forest +5s, birds waking +30s, evening birds +30s, nocturnal insects +30s, crickets/frogs +60s, field cricket +5s, grasshopper +0s, sea waves +20s, sea swirls +5s, underwater +10s, cave #1 +10s, cave #2 +10s). Rain and Birds clips are 8 seconds; Insects and Ocean are 6 seconds; the two Cave clips are 3 seconds -- shorter than everything else, to fit the flash budget once a fifth bank was added.
 2. Downmixed to mono and resampled to 32000 Hz to match `field::rate`.
 3. Loudness-normalized (`loudnorm=I=-18:TP=-2:LRA=7`) so the clips sit at a comparable level; the raw downloads varied enough in level that one would have dominated the mix. Cave's drips are peaky against long quiet stretches, so its Character gain runs well above the other banks' even after this normalization.
 

@@ -41,13 +41,13 @@ Five banks of field recordings: **Rain, Birds, Insects, Ocean and Cave**. Each b
 
 A slow, bar-synced lowpass sweep gives the loops movement. Five self-clearing effects—Pitch Wobble, Delay Throw, Crush, Reverb and Smear—briefly reshape the sound, with gentler settings for Rain and Ocean. Cave plays at 65% speed, extending its three-second recordings to about 4.6 seconds.
 
-Playback state is not saved across restarts. Device-to-device synchronization remains a [design proposal](https://github.com/bruceblay/rill-synth/blob/main/SYNC-DESIGN.md); the synchronized Ensemble is available in [Rill Sound](https://rillsound.com/ensemble).
+Playback state is not saved across restarts. Near a Rill Synth, Mallet or Drums running its ensemble radio, World follows their shared tempo and bar line over ESP-NOW, so its sweep breathes with them; the same Ensemble is in [Rill Sound](https://rillsound.com/ensemble).
 
 ## Hardware
 
 Supported and tested: **M5Stack StickS3**, with ESP32-S3, 8 MB flash, display, IMU and built-in speaker. Other ESP32 boards and earlier M5Stick models are not supported by this configuration.
 
-The PlatformIO board name is `esp32-s3-devkitc-1`; the project supplies the StickS3 memory settings and uses M5Unified for board peripherals. Flash is partitioned as a single factory app slot (`partitions_field.csv`), not the usual two-slot OTA layout, so the embedded clips fit -- this device is flashed by USB each time, not updated over the air. The partition has been grown twice now (~7 MB, then ~7.6 MB, now ~7.87 MB) to fit Insects' and then Cave's clips, and sits at ~99.6% full (~30 KB free) -- this is the practical ceiling on an 8 MB chip. Anything more will need to trim or drop an existing clip rather than grow further.
+The PlatformIO board name is `esp32-s3-devkitc-1`; the project supplies the StickS3 memory settings and uses M5Unified for board peripherals. Flash is partitioned as a single factory app slot (`partitions_field.csv`), not the usual two-slot OTA layout, so the embedded clips fit -- this device is flashed by USB each time, not updated over the air. The partition has been grown twice now (~7 MB, then ~7.6 MB, now ~7.87 MB) to fit Insects' and then Cave's clips, -- the practical ceiling on an 8 MB chip. The ensemble radio's WiFi stack (~390 KB) then displaced the rain-on-wheelbarrow clip, leaving the app ~98.5% full (~120 KB free). Anything more will need to trim or drop an existing clip rather than grow further.
 
 ## Build and install
 
