@@ -41,7 +41,7 @@ Five banks of field recordings: **Rain, Birds, Insects, Ocean and Cave**. Each b
 
 A slow, bar-synced lowpass sweep gives the loops movement. Five self-clearing effects—Pitch Wobble, Delay Throw, Crush, Reverb and Smear—briefly reshape the sound, with gentler settings for Rain and Ocean. Cave plays at 65% speed, extending its three-second recordings to about 4.6 seconds.
 
-Playback state is not saved across restarts. Near a Rill Synth, Mallet or Drums running its ensemble radio, World follows their shared tempo and bar line over ESP-NOW, so its sweep breathes with them; the same Ensemble is in [Rill Sound](https://rillsound.com/ensemble).
+Playback state is not saved across restarts. Near a Rill Synth, Mallet or Drums running its ensemble radio, World follows their shared tempo and bar line over ESP-NOW, so its sweep breathes with them, and a new texture comes in on the next bar line. The same Ensemble is in [Rill Sound](https://rillsound.com/ensemble).
 
 ## Hardware
 

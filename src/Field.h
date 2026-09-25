@@ -103,6 +103,9 @@ class Engine {
 
   enum Xfade : unsigned { Steady = 0, FadingOut, FadingIn };
   unsigned xfadeState = Steady;
+  static constexpr float xfadeSamples = rate * 0.18f;
+  // Set once a conductor's tempo arrives: from then on the bar is the room's.
+  bool following = false, xfadePending = false;
   float xfadeGain = 1;
 
   // Punch-in variety, one at a time, self-clearing after its window.
@@ -225,11 +228,17 @@ class Engine {
   }
 
   void applyCharacter() {
-    tempo = 56 + random() % 37; // 56-92 BPM, overlapping Rill's and Rill Drums' ranges
-    stepSamples = rate * 60 / (tempo * 4);
-    barSamples = stepSamples * steps;
+    const unsigned chosen = 56 + random() % 37; // 56-92 BPM, overlapping Rill's and Rill Drums' ranges
     punchRng = (rng ^ 0xc2b2ae35u) | 1u;
-    barPhase = 0; bar = 0;
+    // In an ensemble the tempo and the bar belong to the room: a new texture
+    // takes them over rather than starting a clock of its own, which put the
+    // device off the shared bar on every tap and shake.
+    if (!following) {
+      tempo = chosen;
+      stepSamples = rate * 60 / (tempo * 4);
+      barSamples = stepSamples * steps;
+      barPhase = 0; bar = 0;
+    }
     swellStep = 2 * pi / (active_().swellBars * barSamples);
     swellPhase = unit() * 2 * pi;
     svfLow = svfBand = 0;
@@ -243,6 +252,12 @@ class Engine {
   }
 
   void beginXfade() { xfadeState = FadingOut; }
+  // In an ensemble a change waits for the bar: the fade out starts so the new
+  // texture comes in on the next bar line. Alone, it starts at once.
+  void requestXfade() {
+    if (following) xfadePending = true;
+    else beginXfade();
+  }
 
   void stepClock() {
     if (gridTrim && barSamples) {
@@ -255,6 +270,10 @@ class Engine {
       if (moved < 0) moved += barSamples;
       barPhase = uint32_t(moved);
       gridTrim -= bite;
+    }
+    if (xfadePending && xfadeState == Steady && barSamples - barPhase <= xfadeSamples) {
+      xfadePending = false;
+      beginXfade();
     }
     if (++barPhase >= barSamples) { barPhase = 0; ++bar; barTick = true; maybePunch(); }
   }
@@ -330,7 +349,7 @@ class Engine {
   void generate() {
     texture = pickTextureInBank(bank);
     ++generation;
-    if (generation == 1) applyCharacter(); else beginXfade();
+    if (generation == 1) applyCharacter(); else requestXfade();
   }
   void newVariation() { generate(); }
   // Shake visits every bank before starting another shuffled round.
@@ -339,7 +358,7 @@ class Engine {
     bank = pickFromBag(banksRemaining, bankCount, bank);
     texture = pickTextureInBank(bank);
     ++generation;
-    beginXfade();
+    requestXfade();
   }
   void setPlaying(bool playing) { target = playing ? 1.0f : 0.0f; }
 
@@ -348,6 +367,7 @@ class Engine {
   // Take a conductor's tempo. The swell is measured in bars, so its rate
   // follows the tempo rather than being reset by it.
   void followTempo(unsigned bpm) {
+    following = bpm != 0;
     if (!bpm || bpm == tempo) return;
     tempo = std::max(40u, std::min(160u, bpm));
     stepSamples = rate * 60 / (tempo * 4);
@@ -383,10 +403,10 @@ class Engine {
 
   float sample() {
     if (xfadeState == FadingOut) {
-      xfadeGain -= 1.0f / (rate * 0.18f);
+      xfadeGain -= 1.0f / xfadeSamples;
       if (xfadeGain <= 0) { xfadeGain = 0; applyCharacter(); xfadeState = FadingIn; }
     } else if (xfadeState == FadingIn) {
-      xfadeGain += 1.0f / (rate * 0.18f);
+      xfadeGain += 1.0f / xfadeSamples;
       if (xfadeGain >= 1) { xfadeGain = 1; xfadeState = Steady; }
     }
     stepClock(); ++clock;
