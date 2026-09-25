@@ -27,9 +27,8 @@
 // wobbling its tap length and damping each repeat so the echoes smear into
 // the bed instead of reading as a discrete, clean echo.
 //
-// This still stands in for a future ensemble conductor's shared tempo and
-// bar boundary (see SYNC-DESIGN.md in the Rill repository): the bar clock
-// here is exactly what a conductor packet would eventually drive.
+// In an ensemble the conductor's tempo and bar count drive this bar clock
+// (see Radio.h and SYNC-DESIGN.md in the Rill repository).
 namespace field {
 constexpr uint32_t rate = 32000;
 constexpr float pi = 3.14159265358979323846f;
