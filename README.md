@@ -31,6 +31,7 @@ Actual 240 × 135 renderer captures. Birds flap across a blue sky; rain forms ex
 | Front button: tap | Pick a new sample and character within the current bank, change the visual, and play |
 | Front button: hold for about 0.65 seconds | Fade sound out or in; the loop continues while quiet |
 | Side button: tap | Cycle volume (it starts at the quietest step) and show the data view for four seconds |
+| Side button: hold | Slow the whole ensemble by 4 BPM, starting on the bar after next; below 52 it comes round to 100 |
 | Shake | Cross into a different bank -- a different environment, a different visual palette and drift |
 
 The data view shows the current bank, recording, generation, tempo, bar count, volume and battery estimate.
@@ -41,7 +42,7 @@ Five banks of field recordings: **Rain, Birds, Insects, Ocean and Cave**. Each b
 
 A slow, bar-synced lowpass sweep gives the loops movement. Five self-clearing effects—Pitch Wobble, Delay Throw, Crush, Reverb and Smear—briefly reshape the sound, with gentler settings for Rain and Ocean. Cave plays at 65% speed, extending its three-second recordings to about 4.6 seconds.
 
-Playback state is not saved across restarts. Near a Rill Synth, Mallet or Drums running its ensemble radio, World follows their shared tempo and bar line over ESP-NOW, so its sweep breathes with them, and a new texture comes in on the next bar line. The same Ensemble is in [Rill Sound](https://rillsound.com/ensemble).
+Playback state is not saved across restarts. Near a Rill Synth, Mallet or Drums running its ensemble radio, World follows their shared tempo and bar line over ESP-NOW, leaving the clock to them, so its sweep breathes with them, and a new texture comes in on the next bar line. The same Ensemble is in [Rill Sound](https://rillsound.com/ensemble).
 
 ## Hardware
 

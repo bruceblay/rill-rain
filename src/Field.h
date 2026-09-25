@@ -373,6 +373,8 @@ class Engine {
     stepSamples = rate * 60 / (tempo * 4);
     barSamples = stepSamples * steps;
     swellStep = 2 * pi / (active_().swellBars * barSamples);
+    // The ensemble changes tempo on a bar line and this arrives within a beat
+    // of it, so the phase is already right: it counts time since that line.
     if (barPhase >= barSamples) barPhase = 0;
   }
   void trimGrid(int32_t samples) { gridTrim = samples; }

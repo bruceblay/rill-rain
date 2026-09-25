@@ -69,6 +69,15 @@ void motionTask(void*) {
   }
 }
 
+// The tempo on the data view: the ensemble's, or the one it is about to
+// change to after a hold of the side button, so the hold shows at once.
+static unsigned shownTempo(unsigned own) {
+#if ENSEMBLE_SYNC
+  if (unsigned t = radio::tempoAhead()) return t;
+#endif
+  return own;
+}
+
 void draw() {
   auto& d = M5.Display;
   d.fillScreen(0x1082);
@@ -85,7 +94,7 @@ void draw() {
                                     "Waves", "Swirls", "Underwtr",
                                     "Drip 1", "Drip 2"};
   d.setCursor(16, 57); d.printf("%s", textures[(info >> 7) & 31]);
-  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 12), unsigned(info & 127), engine.barCount());
+  d.setCursor(16, 82); d.printf("%02u  %u BPM  bar %u", unsigned(info >> 12), shownTempo(unsigned(info & 127)), engine.barCount());
   d.setCursor(16, 108);
   if (playing) d.printf("Vol %u%%", unsigned(volume) * 100 / 255);
   else d.print("resting");
@@ -104,6 +113,7 @@ void setup() {
   scene.seed(esp_random());
   sceneInfo.store(engine.displayInfo());
   M5.BtnA.setHoldThresh(650);
+  M5.BtnB.setHoldThresh(650);
   M5.Display.setRotation(1);
   M5.Display.setBrightness(55);
   M5.Speaker.setVolume(volume);
@@ -117,7 +127,9 @@ void setup() {
   if (xTaskCreatePinnedToCore(motionTask, "field-motion", 4096, nullptr, 1, nullptr, 0) != pdPASS)
     Serial.println("Motion task unavailable");
 #if ENSEMBLE_SYNC
-  if (!radio::begin(engine.bpm()))
+  // World keeps the clock only when alone: a wash with no pulse of its own
+  // is the worst device to hold the ensemble's tempo.
+  if (!radio::begin(engine.bpm(), false, true))
     Serial.println("ensemble radio unavailable; playing alone");
 #endif
   if (xTaskCreatePinnedToCore(audioTask, "field-audio", 4096, nullptr, 3, nullptr, 1) != pdPASS) {
@@ -174,6 +186,14 @@ void loop() {
     volume = volume >= 255 ? 45 : volume + 30;
     M5.Speaker.setVolume(volume); changed = true;
     infoVisible = true; infoAt = now;
+  }
+  // Holding the side button slows the whole ensemble a step, from the bar
+  // after next; past the slowest it comes round to the fastest.
+  if (M5.BtnB.wasHold()) {
+#if ENSEMBLE_SYNC
+    radio::slower();
+#endif
+    changed = true; infoVisible = true; infoAt = now;
   }
   static uint32_t frameAt = 0;
   static unsigned lastBank = 0;
