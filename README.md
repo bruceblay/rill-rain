@@ -30,7 +30,7 @@ Actual 240 × 135 renderer captures. Birds flap across a blue sky; rain forms ex
 | --- | --- |
 | Front button: tap | Pick a new sample and character within the current bank, change the visual, and play |
 | Front button: hold for about 0.65 seconds | Fade sound out or in; the loop continues while quiet |
-| Side button: tap | Cycle volume and show the data view for four seconds |
+| Side button: tap | Cycle volume (it starts at the quietest step) and show the data view for four seconds |
 | Shake | Cross into a different bank -- a different environment, a different visual palette and drift |
 
 The data view shows the current bank, recording, generation, tempo, bar count, volume and battery estimate.

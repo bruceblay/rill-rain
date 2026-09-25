@@ -32,7 +32,9 @@ static std::atomic<uint32_t> worstRenderUs{0}, queueErrors{0};
 // request is: this engine is not safe to touch from two tasks at once.
 static std::atomic<uint32_t> ensembleTempo{0}, ensembleBar{0};
 static std::atomic<int32_t> gridTrim{0};
-static uint8_t volume = 165;
+// Starts at the quietest step of the side button's cycle: World is the
+// environmental layer under an ensemble, and can be brought up from there.
+static uint8_t volume = 45;
 
 void audioTask(void*) {
   unsigned index = 0;
