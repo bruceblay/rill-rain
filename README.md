@@ -6,7 +6,7 @@
 
 A generative environment instrument for the **M5Stack StickS3**. Field recordings of rain, birds, insects, ocean and cave ambiences move through slow filters and effects, accompanied by particle visuals. Tap for a new sample. Shake for a new environment.
 
-[Play Rill World](https://rillsound.com/world) · [Build and install](#build-and-install)
+[Play Rill World](https://rillsound.com/world) · [Get on M5Burner](https://burner.m5stack.com/firmware/2102132303056334850) · [Build and install](#build-and-install)
 
 **Rill family:** [Synth](https://github.com/bruceblay/rill-synth) · [Mallet](https://github.com/bruceblay/rill-mallet) · [World](https://github.com/bruceblay/rill-world) · [Drums](https://github.com/bruceblay/rill-drums) · [Rill Sound](https://rillsound.com)
 
