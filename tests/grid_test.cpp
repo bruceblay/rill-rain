@@ -35,8 +35,8 @@ static void checkTempoChange() {
       if (error > span / 2) error -= span;
       engine.trimGrid(int32_t(error / 4));
       if (switchAt >= 0) {
-        if (i < switchAt + int64_t(field::rate) * 8) during = std::max(during, std::llabs(error));
-        else worst = std::max(worst, std::llabs(error));
+        if (i < switchAt + int64_t(field::rate) * 8) during = std::max<int64_t>(during, std::llabs(error));
+        else worst = std::max<int64_t>(worst, std::llabs(error));
       }
     }
     assert(engine.bpm() == slower);
@@ -65,7 +65,7 @@ int main() {
       int64_t error = ((want - int64_t(engine.barPhaseSamples())) % span + span) % span;
       if (error > span / 2) error -= span;
       engine.trimGrid(int32_t(error / 4));
-      if (i > int64_t(field::rate) * 15) worst = std::max(worst, std::llabs(error));
+      if (i > int64_t(field::rate) * 15) worst = std::max<int64_t>(worst, std::llabs(error));
     }
     assert(worst < field::rate * 2 / 1000);
     assert(engine.variation() > first + 5);  // the taps and shakes did land
